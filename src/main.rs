@@ -219,10 +219,15 @@ impl App {
     }
 
     fn open_url(&self) {
-        Command::new("open")
+        let child = Command::new("xdg-open")
             .arg(&self.commits[self.index].url)
             .spawn()
-            .unwrap();
+            .or_else(|_| {
+                Command::new("open")
+                    .arg(&self.commits[self.index].url)
+                    .spawn()
+            });
+        let _ = child.unwrap().wait();
     }
 
     fn exit(&mut self) {

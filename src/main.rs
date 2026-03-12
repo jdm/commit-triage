@@ -303,22 +303,33 @@ impl Widget for &App {
             State::Accepted => title.green(),
             State::Untriaged => title.yellow(),
         };
-        let mut lines = vec![
-            title,
+        let mut lines: Vec<Line> = vec![
+            title.into(),
             commit.authors.join(", ").into(),
-            commit.label.as_str().white(),
+            commit.label.as_str().white().into(),
             "".into(),
         ];
-        lines.extend(commit.hints.iter().map(|line| line.clone().cyan()));
+        for line in commit.hints.iter() {
+            if line.starts_with("commit ") {
+                lines.push(Line::from(vec![
+                    line.clone().cyan(),
+                    " (git show ".into(),
+                    "<S>".blue().bold(),
+                    ")".into(),
+                ]));
+            } else {
+                lines.push(line.clone().cyan().into());
+            }
+        }
         lines.push("".into());
         if self.unroll {
-            lines.extend(commit.body.iter().map(|line| line.into()));
+            lines.extend(commit.body.iter().map(|line| line.clone().into()));
         } else {
-            lines.push("<space> to show body".dark_gray());
+            lines.push("<space> to show body".dark_gray().into());
         }
         lines.push("".into());
         lines.push(commit.date.split("T").next().unwrap().into());
-        let commit_text = Text::from(lines.into_iter().map(Line::from).collect::<Vec<_>>());
+        let commit_text = Text::from(lines.into_iter().collect::<Vec<_>>());
 
         let input_area = block
             .inner(area)

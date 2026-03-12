@@ -2,8 +2,11 @@
 use std::cell::Cell;
 use std::env;
 use std::io;
+use std::io::Write;
 use std::path::PathBuf;
+use std::process::Child;
 use std::process::Command;
+use std::process::Stdio;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
@@ -32,6 +35,7 @@ pub struct App {
     /// Position of cursor in the editor area.
     character_index: usize,
     cursor_pos: Cell<Option<(u16, u16)>>,
+    tmux: Child,
 }
 
 fn main() {
@@ -51,10 +55,18 @@ fn main() {
         input: String::new(),
         character_index: 0,
         cursor_pos: Cell::new(None),
+        tmux: Command::new("tmux")
+            .args(["-CL", "commit-triage", "attach-session"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
     };
     ratatui::run(|terminal| app.run(terminal)).unwrap();
 
     write_to_file(app.commits, &path).unwrap();
+    app.tmux.kill().unwrap();
 }
 
 impl App {
@@ -98,6 +110,7 @@ impl App {
                 KeyCode::Char('-') => self.update_state(State::Ignored),
                 KeyCode::Char(' ') => self.unroll = !self.unroll,
                 KeyCode::Char('t') => self.open_tag_editor(),
+                KeyCode::Char('s') => self.git_show(),
                 _ => {}
             }
         } else {
@@ -222,6 +235,22 @@ impl App {
         Command::new("open")
             .arg(&self.commits[self.index].url)
             .spawn()
+            .unwrap();
+    }
+
+    fn git_show(&mut self) {
+        let command = format!(
+            // show with stat (lines changed), summary (files created and deleted), and patch.
+            // always run the pager, even if the output is short enough to not need scrolling
+            // (git’s default is LESS=FRX, which exits immediately for short outputs).
+            "new-window env LESS=RX git -C ~/servo show --stat --summary -p {}\n",
+            self.commits[self.index].hash
+        );
+        self.tmux
+            .stdin
+            .as_mut()
+            .unwrap()
+            .write_all(command.as_bytes())
             .unwrap();
     }
 

@@ -21,7 +21,7 @@ pub struct Commit {
     pub label: String,
 }
 
-pub fn write_to_file(commits: Vec<Commit>, path: &Path) -> Result<(), ()> {
+pub fn write_to_file(commits: &[Commit], path: &Path) -> Result<(), ()> {
     let contents = std::fs::read_to_string(path).map_err(|_| ())?;
     let mut updated = String::new();
     let mut index = 0;

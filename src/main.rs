@@ -22,6 +22,7 @@ mod commit;
 
 #[derive(Debug)]
 pub struct App {
+    path: PathBuf,
     commits: Vec<Commit>,
     index: usize,
     unroll: bool,
@@ -44,6 +45,7 @@ fn main() {
             .iter()
             .position(|commit| commit.state == State::Untriaged)
             .unwrap_or(0),
+        path,
         commits,
         edit_tag: false,
         unroll: false,
@@ -54,7 +56,7 @@ fn main() {
     };
     ratatui::run(|terminal| app.run(terminal)).unwrap();
 
-    write_to_file(app.commits, &path).unwrap();
+    write_to_file(&app.commits, &app.path).unwrap();
 }
 
 impl App {
@@ -177,6 +179,7 @@ impl App {
         self.edit_tag = false;
         if commit {
             self.commits[self.index].label = std::mem::take(&mut self.input);
+            write_to_file(&self.commits, &self.path).unwrap();
         }
     }
 
@@ -216,6 +219,7 @@ impl App {
     fn update_state(&mut self, state: State) {
         self.commits[self.index].state = state;
         self.next_index(false);
+        write_to_file(&self.commits, &self.path).unwrap();
     }
 
     fn open_url(&self) {

@@ -3,7 +3,7 @@ use std::cell::Cell;
 use std::env;
 use std::io;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
@@ -221,10 +221,16 @@ impl App {
     fn open_url(&self) {
         let child = Command::new("xdg-open")
             .arg(&self.commits[self.index].url)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .spawn()
             .or_else(|_| {
                 Command::new("open")
                     .arg(&self.commits[self.index].url)
+                    .stdin(Stdio::null())
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
                     .spawn()
             });
         let _ = child.unwrap().wait();

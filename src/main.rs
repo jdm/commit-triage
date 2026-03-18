@@ -215,7 +215,7 @@ impl App {
 
     fn update_state(&mut self, state: State) {
         self.commits[self.index].state = state;
-        self.index += 1;
+        self.next_index(false);
     }
 
     fn open_url(&self) {

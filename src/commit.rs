@@ -21,7 +21,7 @@ pub struct Commit {
     pub label: String,
 }
 
-pub fn write_to_file(commits: Vec<Commit>, path: &Path) -> Result<(), ()> {
+pub fn write_to_file(commits: &[Commit], path: &Path) -> Result<(), ()> {
     let contents = std::fs::read_to_string(path).map_err(|_| ())?;
     let mut updated = String::new();
     let mut index = 0;
@@ -35,15 +35,13 @@ pub fn write_to_file(commits: Vec<Commit>, path: &Path) -> Result<(), ()> {
                 continue;
             }
         }
-        if !line.starts_with("https") &&
-            !line.starts_with("-") &&
-            !line.starts_with("+")
-        {
+        if !line.starts_with("https") && !line.starts_with("-") && !line.starts_with("+") {
             updated.push_str(line);
             updated.push('\n');
             continue;
         }
-        let rest = line.strip_prefix("-")
+        let rest = line
+            .strip_prefix("-")
             .or_else(|| line.strip_prefix("+"))
             .unwrap_or(line)
             .to_owned();
@@ -51,7 +49,7 @@ pub fn write_to_file(commits: Vec<Commit>, path: &Path) -> Result<(), ()> {
         match commits[index].state {
             State::Ignored => updated.push('-'),
             State::Accepted => updated.push('+'),
-            State::Untriaged => {},
+            State::Untriaged => {}
         }
         updated.push_str(&rest);
         updated.push('\n');
@@ -65,7 +63,7 @@ pub fn write_to_file(commits: Vec<Commit>, path: &Path) -> Result<(), ()> {
 
     let mut buffer = File::create(path).map_err(|_| ())?;
     buffer.write_all(updated.as_bytes()).map_err(|_| ())?;
-    Ok(())    
+    Ok(())
 }
 
 pub fn parse_from_file(path: &Path) -> Result<Vec<Commit>, ()> {
@@ -108,12 +106,19 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
         let mut parts = line_rest.split("\t");
         commit.url = parts.next().unwrap().to_owned();
         let author_info = parts.next().unwrap();
-        let author_info = author_info.strip_prefix("(").unwrap().strip_suffix(")").unwrap();
-        let mut author_info = author_info.split(",").map(|part| part.trim().to_owned()).collect::<Vec<_>>();
+        let author_info = author_info
+            .strip_prefix("(")
+            .unwrap()
+            .strip_suffix(")")
+            .unwrap();
+        let mut author_info = author_info
+            .split(",")
+            .map(|part| part.trim().to_owned())
+            .collect::<Vec<_>>();
         author_info.pop();
         commit.authors = author_info;
-        if commit.authors.contains(&"@dependabot[bot]".to_owned()) ||
-            commit.authors.contains(&"@servo-wpt-sync".to_owned())
+        if commit.authors.contains(&"@dependabot[bot]".to_owned())
+            || commit.authors.contains(&"@servo-wpt-sync".to_owned())
         {
             commit.state = State::Ignored;
         }

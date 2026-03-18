@@ -104,7 +104,8 @@ impl App {
             match key_event.code {
                 KeyCode::Enter => self.commit_tag(true),
                 KeyCode::Char(to_insert) => self.enter_char(to_insert),
-                KeyCode::Backspace => self.delete_char(),
+                KeyCode::Backspace => self.delete_char(true),
+                KeyCode::Delete => self.delete_char(false),
                 KeyCode::Left => self.move_cursor_left(),
                 KeyCode::Right => self.move_cursor_right(),
                 KeyCode::Esc => self.commit_tag(false),
@@ -132,11 +133,18 @@ impl App {
         self.move_cursor_right();
     }
 
-    fn delete_char(&mut self) {
-        let is_not_cursor_leftmost = self.byte_index != 0;
-        if is_not_cursor_leftmost {
-            self.move_cursor_left();
-            self.input.remove(self.byte_index);
+    fn delete_char(&mut self, backwards: bool) {
+        if backwards {
+            let is_not_cursor_leftmost = self.byte_index != 0;
+            if is_not_cursor_leftmost {
+                self.move_cursor_left();
+                self.input.remove(self.byte_index);
+            }
+        } else {
+            let is_not_cursor_rightmost = self.byte_index != self.input.len();
+            if is_not_cursor_rightmost {
+                self.input.remove(self.byte_index);
+            }
         }
     }
 

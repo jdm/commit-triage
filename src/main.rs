@@ -102,9 +102,19 @@ impl App {
             }
         } else {
             let has_ctrl = key_event.modifiers.contains(KeyModifiers::CONTROL);
+            let has_alt = key_event.modifiers.contains(KeyModifiers::ALT);
             match key_event.code {
                 KeyCode::Enter => self.commit_tag(true),
-                KeyCode::Char(to_insert) => self.enter_char(to_insert),
+                KeyCode::Char(to_insert) => match (has_ctrl, has_alt, to_insert) {
+                    (true, false, 'a') => self.byte_index = 0,
+                    (true, false, 'e') => self.byte_index = self.input.len(),
+                    (true, false, 'b') => self.move_cursor_left(false),
+                    (false, true, 'b') => self.move_cursor_left(true),
+                    (true, false, 'f') => self.move_cursor_right(false),
+                    (false, true, 'f') => self.move_cursor_right(true),
+                    (false, false, to_insert) => self.enter_char(to_insert),
+                    _ => {}
+                },
                 KeyCode::Backspace => self.delete_char(true),
                 KeyCode::Delete => self.delete_char(false),
                 KeyCode::Left => self.move_cursor_left(has_ctrl),

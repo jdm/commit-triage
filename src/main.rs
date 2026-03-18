@@ -101,43 +101,60 @@ impl App {
                 _ => {}
             }
         } else {
+            let has_ctrl = key_event.modifiers.contains(KeyModifiers::CONTROL);
             match key_event.code {
                 KeyCode::Enter => self.commit_tag(true),
                 KeyCode::Char(to_insert) => self.enter_char(to_insert),
                 KeyCode::Backspace => self.delete_char(true),
                 KeyCode::Delete => self.delete_char(false),
-                KeyCode::Left => self.move_cursor_left(),
-                KeyCode::Right => self.move_cursor_right(),
+                KeyCode::Left => self.move_cursor_left(has_ctrl),
+                KeyCode::Right => self.move_cursor_right(has_ctrl),
                 KeyCode::Esc => self.commit_tag(false),
                 _ => {}
             }
         }
     }
 
-    fn move_cursor_left(&mut self) {
-        self.byte_index = self
-            .input
-            .floor_char_boundary(self.byte_index.saturating_sub(1));
-        self.byte_index = self.byte_index.clamp(0, self.input.len());
+    fn move_cursor_left(&mut self, by_one_word: bool) {
+        loop {
+            self.byte_index = self
+                .input
+                .floor_char_boundary(self.byte_index.saturating_sub(1));
+            self.byte_index = self.byte_index.clamp(0, self.input.len());
+            if !by_one_word
+                || self.byte_index == 0
+                || self.input.as_bytes()[self.byte_index] == b' '
+            {
+                return;
+            }
+        }
     }
 
-    fn move_cursor_right(&mut self) {
-        self.byte_index = self
-            .input
-            .ceil_char_boundary(self.byte_index.saturating_add(1));
-        self.byte_index = self.byte_index.clamp(0, self.input.len());
+    fn move_cursor_right(&mut self, by_one_word: bool) {
+        loop {
+            self.byte_index = self
+                .input
+                .ceil_char_boundary(self.byte_index.saturating_add(1));
+            self.byte_index = self.byte_index.clamp(0, self.input.len());
+            if !by_one_word
+                || self.byte_index == self.input.len()
+                || self.input.as_bytes()[self.byte_index] == b' '
+            {
+                return;
+            }
+        }
     }
 
     fn enter_char(&mut self, new_char: char) {
         self.input.insert(self.byte_index, new_char);
-        self.move_cursor_right();
+        self.move_cursor_right(false);
     }
 
     fn delete_char(&mut self, backwards: bool) {
         if backwards {
             let is_not_cursor_leftmost = self.byte_index != 0;
             if is_not_cursor_leftmost {
-                self.move_cursor_left();
+                self.move_cursor_left(false);
                 self.input.remove(self.byte_index);
             }
         } else {

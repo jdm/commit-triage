@@ -109,6 +109,8 @@ impl App {
                 KeyCode::Delete => self.delete_char(false),
                 KeyCode::Left => self.move_cursor_left(has_ctrl),
                 KeyCode::Right => self.move_cursor_right(has_ctrl),
+                KeyCode::Home => self.byte_index = 0,
+                KeyCode::End => self.byte_index = self.input.len(),
                 KeyCode::Esc => self.commit_tag(false),
                 _ => {}
             }

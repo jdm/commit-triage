@@ -15,6 +15,7 @@ pub struct Commit {
     pub url: String,
     pub authors: Vec<String>,
     pub title: String,
+    pub hints: Vec<String>,
     pub body: Vec<String>,
     pub date: String,
     pub state: State,
@@ -31,7 +32,7 @@ pub fn write_to_file(commits: Vec<Commit>, path: &Path) -> Result<(), ()> {
             updated.push_str("    ");
             updated.push_str(&label);
             updated.push('\n');
-            if !line.starts_with("    #") {
+            if !line.starts_with("    #") && !line.starts_with("    ^") {
                 continue;
             }
         }
@@ -78,6 +79,10 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
     for line in contents.lines() {
         if line.starts_with(">>>") {
             current_date = line.strip_prefix(">>> ").unwrap().to_owned();
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("    ^ ") {
+            commit.hints.push(rest.to_owned());
             continue;
         }
         if let Some(rest) = line.strip_prefix("    # ") {
@@ -142,6 +147,7 @@ mod test {
     # This patch implements export key operation of ML-KEM, with `ml-kem` crate.
     # Testing: Pass some WPT tests that were expected to fail.  Fixes: Part of #41473
 -https://github.com/servo/servo/pull/41198	(@Narfinger, #41198)	Base: Rename IpcSharedMemory to GenericSharedMemory (#41198)
+    ^ /!\ contains changes to WPT expectations! it probably affects the web platform
     # In the future, servo components should depend on the generic channels in base instead of IpcChannels to correctly
     # optimize for multiprocess vs non-multiprocess mode.  This reexports IpcSharedMemory as GenericSharedMemory in
     # GenericChannel and changes all dependencies on it.
@@ -155,6 +161,7 @@ mod test {
                 url: "https://github.com/servo/servo/pull/41604".to_owned(),
                 authors: vec!["@kkoyung".to_owned()],
                 title: "script: Implement export key operation of ML-KEM (#41604)".to_owned(),
+                hints: vec![],
                 body: vec![
                     "Continue on adding ML-KEM support to WebCrypto API.  Specification:".to_owned(),
                     "https://wicg.github.io/webcrypto-modern-algos/#ml-kem".to_owned(),
@@ -169,6 +176,9 @@ mod test {
                 url: "https://github.com/servo/servo/pull/41198".to_owned(),
                 authors: vec!["@Narfinger".to_owned()],
                 title: "Base: Rename IpcSharedMemory to GenericSharedMemory (#41198)".to_owned(),
+                hints: vec![
+                    r"/!\ contains changes to WPT expectations! it probably affects the web platform".to_owned(),
+                ],
                 body: vec![
                     "In the future, servo components should depend on the generic channels in base instead of IpcChannels to correctly".to_owned(),
                     "optimize for multiprocess vs non-multiprocess mode.  This reexports IpcSharedMemory as GenericSharedMemory in".to_owned(),

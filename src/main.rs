@@ -291,6 +291,8 @@ impl Widget for &App {
             commit.label.as_str().white(),
             "".into(),
         ];
+        lines.extend(commit.hints.iter().map(|line| line.clone().cyan()));
+        lines.push("".into());
         if self.unroll {
             lines.extend(commit.body.iter().map(|line| line.into()));
         } else {

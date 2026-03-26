@@ -7,13 +7,13 @@ use std::process::Command;
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
+    DefaultTerminal, Frame,
     buffer::Buffer,
-    layout::{Alignment, Position, Rect, Constraint},
+    layout::{Alignment, Constraint, Position, Rect},
     style::Stylize,
     symbols::border,
     text::{Line, Text},
-    widgets::{Block, Paragraph, Widget, Padding},
-    DefaultTerminal, Frame,
+    widgets::{Block, Padding, Paragraph, Widget},
 };
 
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
@@ -38,9 +38,12 @@ fn main() {
     let mut args = env::args();
     args.next();
     let path = PathBuf::from(args.next().unwrap());
-    let commits = parse_from_file(&path).unwrap(); 
+    let commits = parse_from_file(&path).unwrap();
     let mut app = App {
-        index: commits.iter().position(|commit| commit.state == State::Untriaged).unwrap_or(0),
+        index: commits
+            .iter()
+            .position(|commit| commit.state == State::Untriaged)
+            .unwrap_or(0),
         commits,
         edit_tag: false,
         unroll: false,
@@ -55,7 +58,6 @@ fn main() {
 }
 
 impl App {
-
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         while !self.exit {
@@ -111,7 +113,6 @@ impl App {
         }
     }
 
-
     fn move_cursor_left(&mut self) {
         let cursor_moved_left = self.character_index.saturating_sub(1);
         self.character_index = self.clamp_cursor(cursor_moved_left);
@@ -125,7 +126,7 @@ impl App {
     fn enter_char(&mut self, new_char: char) {
         let index = self.byte_index();
         self.input.insert(index, new_char);
-        self.move_cursor_right();        
+        self.move_cursor_right();
     }
 
     /// Returns the byte index based on the character position.
@@ -231,8 +232,19 @@ impl App {
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let remaining = self.commits.iter().filter(|commit| commit.state == State::Untriaged).count();
-        let title = Line::from(format!(" Commit triage: {}/{} remaining", remaining, self.commits.len()).bold());
+        let remaining = self
+            .commits
+            .iter()
+            .filter(|commit| commit.state == State::Untriaged)
+            .count();
+        let title = Line::from(
+            format!(
+                " Commit triage: {}/{} remaining",
+                remaining,
+                self.commits.len()
+            )
+            .bold(),
+        );
         let instructions = Line::from(vec![
             " Next ".into(),
             "<J>".blue().bold(),
@@ -277,7 +289,8 @@ impl Widget for &App {
         lines.push(commit.date.split("T").next().unwrap().into());
         let commit_text = Text::from(lines.into_iter().map(Line::from).collect::<Vec<_>>());
 
-        let input_area = block.inner(area)
+        let input_area = block
+            .inner(area)
             .centered(Constraint::Percentage(50), Constraint::Length(3));
 
         Paragraph::new(commit_text)

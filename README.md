@@ -9,3 +9,5 @@ Goals:
 * speed up common investigations
 * minimize hand movements
 * reduce typos
+
+![Demo of triaging some commits with the TUI](docs/demo.gif "Screen recording")

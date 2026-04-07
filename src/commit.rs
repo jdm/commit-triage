@@ -12,6 +12,7 @@ pub enum State {
 
 #[derive(Debug, Default, PartialEq)]
 pub struct Commit {
+    pub index_in_file: usize,
     pub url: String,
     pub authors: Vec<String>,
     pub title: String,
@@ -97,6 +98,7 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
             }
             commits.push(commit);
             commit = Commit::default();
+            commit.index_in_file = commits.len();
         }
         started_first_commit = true;
         commit.date = current_date.clone();
@@ -160,6 +162,7 @@ mod test {
         let commits = parse_from_str(contents);
         let expected = vec![
             Commit {
+                index_in_file: 0,
                 url: "https://github.com/servo/servo/pull/41604".to_owned(),
                 authors: vec!["@kkoyung".to_owned()],
                 title: "script: Implement export key operation of ML-KEM (#41604)".to_owned(),
@@ -175,6 +178,7 @@ mod test {
                 state: State::Accepted,
             },
             Commit {
+                index_in_file: 1,
                 url: "https://github.com/servo/servo/pull/41198".to_owned(),
                 authors: vec!["@Narfinger".to_owned()],
                 title: "Base: Rename IpcSharedMemory to GenericSharedMemory (#41198)".to_owned(),

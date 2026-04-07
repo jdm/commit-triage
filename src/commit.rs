@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum State {
     #[default]
     Untriaged,
@@ -10,7 +10,7 @@ pub enum State {
     Accepted,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Commit {
     pub index_in_file: usize,
     pub url: String,

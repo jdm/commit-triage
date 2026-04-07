@@ -75,28 +75,30 @@ pub fn parse_from_file(path: &Path) -> Result<Vec<Commit>, ()> {
 fn parse_from_str(contents: &str) -> Vec<Commit> {
     let mut commits = vec![];
     let mut commit = Commit::default();
+    let mut started_first_commit = false;
     let mut current_date = String::new();
     for line in contents.lines() {
         if line.starts_with(">>>") {
             current_date = line.strip_prefix(">>> ").unwrap().to_owned();
             continue;
         }
-        if let Some(rest) = line.strip_prefix("    ^ ") {
-            commit.hints.push(rest.to_owned());
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("    # ") {
-            commit.body.push(rest.to_owned());
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("    ") {
-            commit.label = rest.to_owned();
-            continue;
-        }
-        if commit != Commit::default() {
+        if started_first_commit {
+            if let Some(rest) = line.strip_prefix("    ^ ") {
+                commit.hints.push(rest.to_owned());
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("    # ") {
+                commit.body.push(rest.to_owned());
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("    ") {
+                commit.label = rest.to_owned();
+                continue;
+            }
             commits.push(commit);
             commit = Commit::default();
         }
+        started_first_commit = true;
         commit.date = current_date.clone();
         let line_rest;
         if let Some(rest) = line.strip_prefix("-") {

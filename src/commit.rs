@@ -33,6 +33,9 @@ impl Commit {
 }
 
 pub fn write_to_file(commits: &[Commit], path: &Path) -> Result<(), ()> {
+    let mut commits = commits.to_owned();
+    commits.sort_by_key(|commit| commit.index_in_file);
+
     let contents = std::fs::read_to_string(path).map_err(|_| ())?;
     let mut updated = String::new();
     let mut index = 0;

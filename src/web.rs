@@ -6,16 +6,17 @@ use rocket::{
     fs::FileServer,
     futures::{SinkExt, StreamExt},
     get, routes,
+    serde::json::Json,
     tokio::{
         self,
-        sync::{Mutex, broadcast, mpsc},
+        sync::{Mutex, broadcast, mpsc, oneshot},
     },
 };
 use rocket_ws::Message;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::{ARGS, commit::Commit};
+use crate::{ARGS, analysis::WordCloud, commit::Commit};
 
 pub static SHUTDOWN: OnceLock<rocket::Shutdown> = OnceLock::new();
 
@@ -50,7 +51,7 @@ pub async fn server() -> Result<(), rocket::Error> {
         ..Config::default()
     };
     let rocket = rocket::custom(&config)
-        .mount("/", routes![ws])
+        .mount("/", routes![ws, word_cloud])
         .mount("/", FileServer::from("./static"))
         .ignite()
         .await?;
@@ -144,10 +145,19 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
     })
 }
 
+#[get("/wordCloud")]
+async fn word_cloud() -> Json<WordCloud> {
+    info!("word cloud requested");
+    let (tx, rx) = oneshot::channel();
+    ACTION.0.send(Action::GetWordCloud(tx)).await.unwrap();
+    rx.await.unwrap().into()
+}
+
 pub enum Action {
     Keypress(String),
     SetLabel(String),
     GoToCommit(String),
+    GetWordCloud(oneshot::Sender<WordCloud>),
 }
 
 #[derive(Serialize)]

@@ -24,9 +24,11 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
+use crate::analysis::print_word_cloud;
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
 use crate::web::Action;
 
+mod analysis;
 mod commit;
 mod web;
 
@@ -179,6 +181,9 @@ impl App {
                                 self.index = index;
                                 crate::web::update(commit);
                             }
+                        },
+                        Action::GetWordCloud(tx) => {
+                            tx.send(print_word_cloud(&self.commits)).unwrap();
                         },
                     }
                 },

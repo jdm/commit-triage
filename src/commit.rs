@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum State {
     #[default]
     Untriaged,
@@ -10,8 +10,9 @@ pub enum State {
     Accepted,
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Commit {
+    pub index_in_file: usize,
     pub url: String,
     pub authors: Vec<String>,
     pub title: String,
@@ -75,28 +76,31 @@ pub fn parse_from_file(path: &Path) -> Result<Vec<Commit>, ()> {
 fn parse_from_str(contents: &str) -> Vec<Commit> {
     let mut commits = vec![];
     let mut commit = Commit::default();
+    let mut started_first_commit = false;
     let mut current_date = String::new();
     for line in contents.lines() {
         if line.starts_with(">>>") {
             current_date = line.strip_prefix(">>> ").unwrap().to_owned();
             continue;
         }
-        if let Some(rest) = line.strip_prefix("    ^ ") {
-            commit.hints.push(rest.to_owned());
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("    # ") {
-            commit.body.push(rest.to_owned());
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("    ") {
-            commit.label = rest.to_owned();
-            continue;
-        }
-        if commit != Commit::default() {
+        if started_first_commit {
+            if let Some(rest) = line.strip_prefix("    ^ ") {
+                commit.hints.push(rest.to_owned());
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("    # ") {
+                commit.body.push(rest.to_owned());
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("    ") {
+                commit.label = rest.to_owned();
+                continue;
+            }
             commits.push(commit);
             commit = Commit::default();
+            commit.index_in_file = commits.len();
         }
+        started_first_commit = true;
         commit.date = current_date.clone();
         let line_rest;
         if let Some(rest) = line.strip_prefix("-") {
@@ -158,6 +162,7 @@ mod test {
         let commits = parse_from_str(contents);
         let expected = vec![
             Commit {
+                index_in_file: 0,
                 url: "https://github.com/servo/servo/pull/41604".to_owned(),
                 authors: vec!["@kkoyung".to_owned()],
                 title: "script: Implement export key operation of ML-KEM (#41604)".to_owned(),
@@ -173,6 +178,7 @@ mod test {
                 state: State::Accepted,
             },
             Commit {
+                index_in_file: 1,
                 url: "https://github.com/servo/servo/pull/41198".to_owned(),
                 authors: vec!["@Narfinger".to_owned()],
                 title: "Base: Rename IpcSharedMemory to GenericSharedMemory (#41198)".to_owned(),

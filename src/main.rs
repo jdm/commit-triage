@@ -1,10 +1,10 @@
 //use ratatui::{DefaultTerminal, Frame};
 use std::cell::Cell;
-use std::env;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     DefaultTerminal, Frame,
@@ -19,6 +19,15 @@ use ratatui::{
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
 
 mod commit;
+
+#[derive(clap::Parser)]
+struct Args {
+    commits_txt_path: PathBuf,
+
+    /// sort by author, instead of the file’s original order
+    #[arg(long)]
+    sort_by_author: bool,
+}
 
 #[derive(Debug)]
 pub struct App {
@@ -36,16 +45,18 @@ pub struct App {
 }
 
 fn main() {
-    let mut args = env::args();
-    args.next();
-    let path = PathBuf::from(args.next().unwrap());
-    let commits = parse_from_file(&path).unwrap();
+    let args = Args::parse();
+    let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
+    if args.sort_by_author {
+        commits.sort_by(|p, q| p.authors.cmp(&q.authors));
+    }
+
     let mut app = App {
         index: commits
             .iter()
             .position(|commit| commit.state == State::Untriaged)
             .unwrap_or(0),
-        path,
+        path: args.commits_txt_path,
         commits,
         edit_tag: false,
         unroll: false,

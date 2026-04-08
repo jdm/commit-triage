@@ -1,10 +1,10 @@
 //use ratatui::{DefaultTerminal, Frame};
 use std::cell::Cell;
-use std::env;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
+use clap::Parser;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
     DefaultTerminal, Frame,
@@ -19,6 +19,11 @@ use ratatui::{
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
 
 mod commit;
+
+#[derive(clap::Parser)]
+pub struct Args {
+    commits_txt_path: PathBuf,
+}
 
 #[derive(Debug)]
 pub struct App {
@@ -36,16 +41,14 @@ pub struct App {
 }
 
 fn main() {
-    let mut args = env::args();
-    args.next();
-    let path = PathBuf::from(args.next().unwrap());
-    let commits = parse_from_file(&path).unwrap();
+    let args = Args::parse();
+    let commits = parse_from_file(&args.commits_txt_path).unwrap();
     let mut app = App {
         index: commits
             .iter()
             .position(|commit| commit.state == State::Untriaged)
             .unwrap_or(0),
-        path,
+        path: args.commits_txt_path,
         commits,
         edit_tag: false,
         unroll: false,

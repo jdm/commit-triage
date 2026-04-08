@@ -27,11 +27,17 @@ struct Args {
     /// sort by author, instead of the file’s original order
     #[arg(long)]
     sort_by_author: bool,
+
+    /// filter commits to those containing this text
+    #[arg(long)]
+    filter_text_containing: Option<String>,
 }
 
 #[derive(Debug)]
 pub struct App {
     path: PathBuf,
+    filter_text_containing: Option<String>,
+
     commits: Vec<Commit>,
     index: usize,
     unroll: bool,
@@ -52,11 +58,9 @@ fn main() {
     }
 
     let mut app = App {
-        index: commits
-            .iter()
-            .position(|commit| commit.state == State::Untriaged)
-            .unwrap_or(0),
+        index: 0,
         path: args.commits_txt_path,
+        filter_text_containing: args.filter_text_containing,
         commits,
         edit_tag: false,
         unroll: false,
@@ -73,6 +77,20 @@ fn main() {
 impl App {
     /// runs the application's main loop until the user quits
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        if let Some(index) = self
+            .commits
+            .iter()
+            .position(|commit| commit.state == State::Untriaged && self.matches_filter(commit))
+        {
+            self.index = index;
+        } else if let Some(index) = self
+            .commits
+            .iter()
+            .position(|commit| self.matches_filter(commit))
+        {
+            self.index = index;
+        }
+
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             self.handle_events(terminal)?;
@@ -207,6 +225,15 @@ impl App {
         }
     }
 
+    fn matches_filter(&self, commit: &Commit) -> bool {
+        if let Some(filter_text_containing) = self.filter_text_containing.as_ref()
+            && !commit.filter_text().contains(filter_text_containing)
+        {
+            return false;
+        }
+        true
+    }
+
     fn next_index(&mut self, shift: bool) {
         let original = self.index;
         loop {
@@ -214,7 +241,13 @@ impl App {
             if self.index >= self.commits.len() {
                 self.index = 0;
             }
-            if self.index == original || !shift {
+            if self.index == original {
+                break;
+            }
+            if !self.matches_filter(&self.commits[self.index]) {
+                continue;
+            }
+            if !shift {
                 break;
             }
             if self.commits[self.index].state == State::Untriaged {
@@ -231,7 +264,13 @@ impl App {
             } else {
                 self.index -= 1;
             }
-            if self.index == original || !shift {
+            if self.index == original {
+                break;
+            }
+            if !self.matches_filter(&self.commits[self.index]) {
+                continue;
+            }
+            if !shift {
                 break;
             }
             if self.commits[self.index].state == State::Untriaged {
@@ -242,7 +281,7 @@ impl App {
 
     fn update_state(&mut self, state: State) {
         self.commits[self.index].state = state;
-        self.next_index(false);
+        self.next_index(true);
         write_to_file(&self.commits, &self.path).unwrap();
     }
 

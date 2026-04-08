@@ -23,6 +23,15 @@ pub struct Commit {
     pub label: String,
 }
 
+impl Commit {
+    pub fn filter_text(&self) -> String {
+        let mut lines = vec![self.title.clone(), self.authors.join(", ")];
+        lines.extend_from_slice(&self.hints);
+        lines.extend_from_slice(&self.body);
+        lines.join("\n")
+    }
+}
+
 pub fn write_to_file(commits: &[Commit], path: &Path) -> Result<(), ()> {
     let contents = std::fs::read_to_string(path).map_err(|_| ())?;
     let mut updated = String::new();

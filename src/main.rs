@@ -21,8 +21,12 @@ use crate::commit::{Commit, State, parse_from_file, write_to_file};
 mod commit;
 
 #[derive(clap::Parser)]
-pub struct Args {
+struct Args {
     commits_txt_path: PathBuf,
+
+    /// sort by author, instead of the file’s original order
+    #[arg(long)]
+    sort_by_author: bool,
 }
 
 #[derive(Debug)]
@@ -42,7 +46,11 @@ pub struct App {
 
 fn main() {
     let args = Args::parse();
-    let commits = parse_from_file(&args.commits_txt_path).unwrap();
+    let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
+    if args.sort_by_author {
+        commits.sort_by(|p, q| p.authors.cmp(&q.authors));
+    }
+
     let mut app = App {
         index: commits
             .iter()

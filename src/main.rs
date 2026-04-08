@@ -242,7 +242,7 @@ impl App {
 
     fn update_state(&mut self, state: State) {
         self.commits[self.index].state = state;
-        self.next_index(false);
+        self.next_index(true);
         write_to_file(&self.commits, &self.path).unwrap();
     }
 

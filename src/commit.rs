@@ -15,6 +15,7 @@ pub struct Commit {
     pub index_in_file: usize,
     pub url: String,
     pub authors: Vec<String>,
+    pub hash_number: String,
     pub title: String,
     pub hints: Vec<String>,
     pub body: Vec<String>,
@@ -32,51 +33,46 @@ impl Commit {
     }
 }
 
-pub fn write_to_file(commits: &[Commit], path: &Path) -> Result<(), ()> {
+pub fn write_to_file(
+    commits: &[Commit],
+    path: &Path,
+    other_commits: Option<&[Commit]>,
+) -> Result<(), ()> {
     let mut commits = commits.to_owned();
     commits.sort_by_key(|commit| commit.index_in_file);
 
-    let contents = std::fs::read_to_string(path).map_err(|_| ())?;
-    let mut updated = String::new();
-    let mut index = 0;
-    let mut save_next_label: Option<String> = None;
-    for line in contents.lines() {
-        if let Some(label) = save_next_label.take() {
-            updated.push_str("    ");
-            updated.push_str(&label);
-            updated.push('\n');
-            if !line.starts_with("    #") && !line.starts_with("    ^") {
-                continue;
-            }
+    let mut file = File::create(path).map_err(|_| ())?;
+    let mut last_date = None;
+    for (commit, other_commit) in commits.iter().zip(other_commits.unwrap_or(&commits)) {
+        if last_date != Some(&commit.date) {
+            writeln!(file, ">>> {}", commit.date).unwrap();
+            last_date = Some(&commit.date);
         }
-        if !line.starts_with("https") && !line.starts_with("-") && !line.starts_with("+") {
-            updated.push_str(line);
-            updated.push('\n');
-            continue;
-        }
-        let rest = line
-            .strip_prefix("-")
-            .or_else(|| line.strip_prefix("+"))
-            .unwrap_or(line)
-            .to_owned();
-        assert!(rest.starts_with(&commits[index].url));
-        match commits[index].state {
-            State::Ignored => updated.push('-'),
-            State::Accepted => updated.push('+'),
+        match commit.state {
             State::Untriaged => {}
+            State::Ignored => write!(file, "-").unwrap(),
+            State::Accepted => write!(file, "+").unwrap(),
         }
-        updated.push_str(&rest);
-        updated.push('\n');
-        save_next_label = if !commits[index].label.is_empty() {
-            Some(commits[index].label.clone())
-        } else {
-            None
-        };
-        index += 1;
+        writeln!(
+            file,
+            "{}\t({}, {})\t{}",
+            other_commit.url,
+            other_commit.authors.join(", "),
+            other_commit.hash_number,
+            other_commit.title
+        )
+        .unwrap();
+        if !commit.label.is_empty() {
+            writeln!(file, "    {}", commit.label).unwrap();
+        }
+        for line in other_commit.hints.iter() {
+            writeln!(file, "    ^ {line}").unwrap();
+        }
+        for line in other_commit.body.iter() {
+            writeln!(file, "    # {line}").unwrap();
+        }
     }
 
-    let mut buffer = File::create(path).map_err(|_| ())?;
-    buffer.write_all(updated.as_bytes()).map_err(|_| ())?;
     Ok(())
 }
 
@@ -136,7 +132,7 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
             .split(",")
             .map(|part| part.trim().to_owned())
             .collect::<Vec<_>>();
-        author_info.pop();
+        commit.hash_number = author_info.pop().unwrap();
         commit.authors = author_info;
         if commit.authors.contains(&"@dependabot[bot]".to_owned())
             || commit.authors.contains(&"@servo-wpt-sync".to_owned())
@@ -177,6 +173,7 @@ mod test {
                 index_in_file: 0,
                 url: "https://github.com/servo/servo/pull/41604".to_owned(),
                 authors: vec!["@kkoyung".to_owned()],
+                hash_number: "#41604".to_owned(),
                 title: "script: Implement export key operation of ML-KEM (#41604)".to_owned(),
                 hints: vec![],
                 body: vec![
@@ -193,6 +190,7 @@ mod test {
                 index_in_file: 1,
                 url: "https://github.com/servo/servo/pull/41198".to_owned(),
                 authors: vec!["@Narfinger".to_owned()],
+                hash_number: "#41198".to_owned(),
                 title: "Base: Rename IpcSharedMemory to GenericSharedMemory (#41198)".to_owned(),
                 hints: vec![
                     r"/!\ contains changes to WPT expectations! it probably affects the web platform".to_owned(),

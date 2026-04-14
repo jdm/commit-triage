@@ -24,6 +24,10 @@ mod commit;
 struct Args {
     commits_txt_path: PathBuf,
 
+    /// update commit data from another commits.txt
+    #[arg(long)]
+    update_commit_data: Option<PathBuf>,
+
     /// sort by author, instead of the file’s original order
     #[arg(long)]
     sort_by_author: bool,
@@ -56,6 +60,11 @@ fn main() {
     if args.sort_by_author {
         commits.sort_by(|p, q| p.authors.cmp(&q.authors));
     }
+    if let Some(other_commits_txt_path) = args.update_commit_data {
+        let other_commits = parse_from_file(&other_commits_txt_path).unwrap();
+        write_to_file(&commits, &args.commits_txt_path, Some(&other_commits)).unwrap();
+        return;
+    }
 
     let mut app = App {
         index: 0,
@@ -71,7 +80,7 @@ fn main() {
     };
     ratatui::run(|terminal| app.run(terminal)).unwrap();
 
-    write_to_file(&app.commits, &app.path).unwrap();
+    write_to_file(&app.commits, &app.path, None).unwrap();
 }
 
 impl App {
@@ -221,7 +230,7 @@ impl App {
         self.edit_tag = false;
         if commit {
             self.commits[self.index].label = std::mem::take(&mut self.input);
-            write_to_file(&self.commits, &self.path).unwrap();
+            write_to_file(&self.commits, &self.path, None).unwrap();
         }
     }
 
@@ -282,7 +291,7 @@ impl App {
     fn update_state(&mut self, state: State) {
         self.commits[self.index].state = state;
         self.next_index(true);
-        write_to_file(&self.commits, &self.path).unwrap();
+        write_to_file(&self.commits, &self.path, None).unwrap();
     }
 
     fn open_url(&self) {

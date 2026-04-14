@@ -1,9 +1,39 @@
 <!doctype html><meta charset="utf-8">
+<style>
+    #title {
+        font-weight: normal;
+    }
+    #title.Untriaged {
+        color: darkorange;
+    }
+    #title.Ignored {
+        color: grey;
+    }
+    #title.Accepted {
+        color: green;
+    }
+</style>
+<h1 id="title"></h1>
+<div id="meta"></div>
+<div id="label"></div>
+<ul id="hints"></ul>
+<hr>
 <div id="content"></div>
 <script>
 const ws = new WebSocket("/ws");
 ws.addEventListener("message", event => {
     console.log(event.data);
-    content.innerHTML = event.data;
+    const data = JSON.parse(event.data);
+    title.className = data.commit.state;
+    title.textContent = data.commit.title;
+    meta.textContent = `${data.commit.date} – ${data.commit.authors.join(", ")}`;
+    label.textContent = data.commit.label;
+    hints.innerHTML = "";
+    for (const hint of data.commit.hints) {
+        const li = document.createElement("li");
+        li.append(hint);
+        hints.append(li);
+    }
+    content.innerHTML = data.rendered_body;
 });
 </script>

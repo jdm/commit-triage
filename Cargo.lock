@@ -327,6 +327,8 @@ dependencies = [
  "ratatui",
  "rocket",
  "rocket_ws",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

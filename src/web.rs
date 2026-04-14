@@ -8,6 +8,7 @@ use rocket::{
     get, routes,
     tokio::sync::broadcast::{Receiver, Sender, channel},
 };
+use serde::Serialize;
 
 use crate::commit::Commit;
 
@@ -53,9 +54,13 @@ pub fn update(commit: &Commit) {
     options.render.gfm_quirks = true;
     options.render.hardbreaks = true;
     options.render.r#unsafe = true;
-    let unsafe_content = markdown_to_html(&commit.body.join("\n"), &options);
-    let content = ammonia::clean(&unsafe_content);
-    *CONTENT.write().unwrap() = content;
+    let unsafe_body = markdown_to_html(&commit.body.join("\n"), &options);
+    let body = ammonia::clean(&unsafe_body);
+    let content = Response {
+        commit: commit.clone(),
+        rendered_body: body,
+    };
+    *CONTENT.write().unwrap() = serde_json::to_string(&content).unwrap();
     UPDATE.0.send(()).unwrap();
 }
 
@@ -78,4 +83,10 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
             }
         })
     })
+}
+
+#[derive(Serialize)]
+struct Response {
+    commit: Commit,
+    rendered_body: String,
 }

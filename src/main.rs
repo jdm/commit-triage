@@ -22,6 +22,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
+use crate::web::Action;
 
 mod commit;
 mod web;
@@ -130,11 +131,27 @@ impl App {
         }
         crate::web::update(&self.commits[self.index]);
 
-        let mut events = EventStream::new();
+        let mut terminal_events = EventStream::new();
+        let mut web_actions = crate::web::ACTION.1.lock().await;
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            if let Some(Ok(event)) = events.next().await {
-                self.handle_event(terminal, event)?;
+            tokio::select! {
+                Some(Ok(event)) = terminal_events.next() => {
+                    self.handle_event(terminal, event)?;
+                },
+                Some(action) = web_actions.recv() => {
+                    match action {
+                        Action::Keypress(keys) => {
+                            for key in keys.chars() {
+                                let mut key_event = KeyEvent::new(KeyCode::Char(key), KeyModifiers::empty());
+                                if key.is_ascii_uppercase() {
+                                    key_event.modifiers = KeyModifiers::SHIFT;
+                                }
+                                self.handle_event(terminal, Event::Key(key_event))?;
+                            }
+                        },
+                    }
+                },
             }
         }
         Ok(())

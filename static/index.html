@@ -36,4 +36,18 @@ ws.addEventListener("message", event => {
     }
     content.innerHTML = data.rendered_body;
 });
+addEventListener("keypress", event => {
+    console.log(event);
+    switch (event.key) {
+    case "q":
+        // require the user to focus the commit-triage TUI to quit.
+        // even though this page is in focus, you may still be able to scroll
+        // through `git show` in a nearby terminal. if you then press `Q` to
+        // quit the `git show` pager without focusing the terminal, you would
+        // quit the commit-triage tool by mistake. so we prevent that.
+        break;
+    default:
+        ws.send(JSON.stringify({"Keypress": event.key}));
+    }
+});
 </script>

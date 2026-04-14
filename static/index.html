@@ -12,6 +12,12 @@
     #title.Accepted {
         color: green;
     }
+    #editorDialog {
+        width: 100%;
+    }
+    #input {
+        width: 100%;
+    }
 </style>
 <h1 id="title"></h1>
 <div id="meta"></div>
@@ -19,6 +25,9 @@
 <ul id="hints"></ul>
 <hr>
 <div id="content"></div>
+<dialog id="editorDialog"><form id="editorForm" method="dialog">
+    <input id="input" autofocus size="100">
+</form></dialog>
 <script>
 const ws = new WebSocket("/ws");
 ws.addEventListener("message", event => {
@@ -35,9 +44,13 @@ ws.addEventListener("message", event => {
         hints.append(li);
     }
     content.innerHTML = data.rendered_body;
+    input.value = data.commit.label;
 });
 addEventListener("keypress", event => {
     console.log(event);
+    if (editorDialog.open) {
+        return;
+    }
     switch (event.key) {
     case "q":
         // require the user to focus the commit-triage TUI to quit.
@@ -46,8 +59,19 @@ addEventListener("keypress", event => {
         // quit the `git show` pager without focusing the terminal, you would
         // quit the commit-triage tool by mistake. so we prevent that.
         break;
+    case "t":
+        editorDialog.showModal();
+        break;
     default:
         ws.send(JSON.stringify({"Keypress": event.key}));
     }
+});
+editorDialog.addEventListener("close", event => {
+    console.log(event);
+    ws.send(JSON.stringify({"Reload": null}));
+});
+editorForm.addEventListener("submit", event => {
+    console.log(event);
+    ws.send(JSON.stringify({"SetLabel": input.value}));
 });
 </script>

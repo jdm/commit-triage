@@ -150,6 +150,11 @@ impl App {
                                 self.handle_event(terminal, Event::Key(key_event))?;
                             }
                         },
+                        Action::SetLabel(label) => {
+                            self.input = label;
+                            self.commit_tag(true);
+                            crate::web::update(&self.commits[self.index]);
+                        },
                     }
                 },
             }

@@ -111,6 +111,16 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
                                 info!(?key, "key pressed");
                                 ACTION.0.send(Action::Keypress(key)).await.unwrap();
                             },
+                            Request::SetLabel(label) => {
+                                info!(?label, "setting label");
+                                ACTION.0.send(Action::SetLabel(label)).await.unwrap();
+                            },
+                            Request::Reload => {
+                                info!("reload requested");
+                                // send the current content
+                                let content = CONTENT.read().unwrap().to_owned();
+                                ws.send(content.into()).await?;
+                            },
                         }
                     },
                 };
@@ -121,6 +131,7 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
 
 pub enum Action {
     Keypress(String),
+    SetLabel(String),
 }
 
 #[derive(Serialize)]
@@ -132,4 +143,6 @@ struct Response {
 #[derive(Deserialize)]
 enum Request {
     Keypress(String),
+    SetLabel(String),
+    Reload,
 }

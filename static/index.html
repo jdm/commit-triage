@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8">
+<div id="content"></div>
+<script>
+const ws = new WebSocket("/ws");
+ws.addEventListener("message", event => {
+    console.log(event.data);
+    content.innerHTML = event.data;
+});
+</script>

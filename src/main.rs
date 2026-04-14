@@ -1,5 +1,6 @@
 //use ratatui::{DefaultTerminal, Frame};
 use std::cell::Cell;
+use std::fs::File;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -16,10 +17,14 @@ use ratatui::{
     text::{Line, Text},
     widgets::{Block, Padding, Paragraph, Widget},
 };
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
 
 mod commit;
+mod web;
 
 #[derive(clap::Parser)]
 struct Args {
@@ -57,6 +62,17 @@ pub struct App {
 
 #[tokio::main]
 async fn main() {
+    // suppress rocket’s default logging to terminal.
+    // you can also read the logs by changing `/dev/null` to some other path.
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_writer(File::create("/dev/null").unwrap()))
+        .with(if std::env::var("RUST_LOG").is_ok() {
+            EnvFilter::builder().from_env_lossy()
+        } else {
+            "commit_triage=info,rocket=info".parse().unwrap()
+        })
+        .init();
+
     let args = Args::parse();
     let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
     if args.sort_by_author {
@@ -67,6 +83,8 @@ async fn main() {
         write_to_file(&commits, &args.commits_txt_path, Some(&other_commits)).unwrap();
         return;
     }
+
+    let web_server = std::thread::spawn(crate::web::server);
 
     let mut app = App {
         index: 0,
@@ -87,6 +105,10 @@ async fn main() {
     app.run(&mut terminal).await.unwrap();
     ratatui::restore();
 
+    eprintln!("shutting down...");
+    crate::web::SHUTDOWN.get().unwrap().clone().notify();
+    web_server.join().unwrap().unwrap();
+
     write_to_file(&app.commits, &app.path, None).unwrap();
 }
 
@@ -106,6 +128,7 @@ impl App {
         {
             self.index = index;
         }
+        crate::web::update(&self.commits[self.index]);
 
         let mut events = EventStream::new();
         while !self.exit {
@@ -273,6 +296,7 @@ impl App {
                 break;
             }
         }
+        crate::web::update(&self.commits[self.index]);
     }
 
     fn prev_index(&mut self, shift: bool) {
@@ -296,6 +320,7 @@ impl App {
                 break;
             }
         }
+        crate::web::update(&self.commits[self.index]);
     }
 
     fn update_state(&mut self, state: State) {

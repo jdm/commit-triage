@@ -105,6 +105,23 @@ addEventListener("keypress", event => {
         ws.send(JSON.stringify({"Keypress": event.key}));
     }
 });
+// when you Shift+scroll, step through commits.
+// unlike Ctrl+scroll, Alt+scroll, and scrolling without modifiers, this does
+// not seem to interfere with typical browser default behaviour.
+addEventListener("wheel", event => {
+    console.log(event);
+    if (!event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+    }
+    if (event.deltaY > 0) {
+        ws.send(JSON.stringify({"Keypress": "j"}));
+        return;
+    }
+    if (event.deltaY < 0) {
+        ws.send(JSON.stringify({"Keypress": "k"}));
+        return;
+    }
+});
 editorDialog.addEventListener("close", event => {
     console.log(event);
     ws.send(JSON.stringify({"Reload": null}));

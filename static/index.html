@@ -1,5 +1,28 @@
 <!doctype html><meta charset="utf-8">
 <style>
+    * {
+        box-sizing: border-box;
+        /* monokai terminal theme */
+        /* <https://gist.github.com/brayevalerien/cb94ac685ebc186f359deae113b6710c> */
+        --monokai-fg: /* Editor Foreground */ #f8f8f2;
+        --monokai-bg: /* Editor Background */ #272822;
+        --sgr-30: /* Terminal ANSI Black */ #333333;
+        --sgr-31: /* Terminal ANSI Red */ #c4265e;
+        --sgr-32: /* Terminal ANSI Green */ #86b42b;
+        --sgr-33: /* Terminal ANSI Yellow */ #b3b42b;
+        --sgr-34: /* Terminal ANSI Blue */ #6a7ec8;
+        --sgr-35: /* Terminal ANSI Magenta */ #8c6bc8;
+        --sgr-36: /* Terminal ANSI Cyan */ #56adbc;
+        --sgr-37: /* Terminal ANSI White */ #e3e3dd;
+        --sgr-90: /* Terminal ANSI Bright Black */ #666666;
+        --sgr-91: /* Terminal ANSI Bright Red */ #f92672;
+        --sgr-92: /* Terminal ANSI Bright Green */ #a6e22e;
+        --sgr-93: /* Terminal ANSI Bright Yellow */ #e2e22e;
+        --sgr-94: /* Terminal ANSI Bright Blue */ #819aff;
+        --sgr-95: /* Terminal ANSI Bright Magenta */ #ae81ff;
+        --sgr-96: /* Terminal ANSI Bright Cyan */ #66d9ef;
+        --sgr-97: /* Terminal ANSI Bright White */ #f8f8f2;
+    }
     #title {
         font-weight: normal;
     }
@@ -12,6 +35,16 @@
     #title.Accepted {
         color: green;
     }
+    #gitShow {
+        float: right;
+        width: 50vw;
+        height: calc(100vh - 4em);
+        margin: 0 1em;
+        padding: 0.5em;
+        overflow: scroll;
+        color: var(--monokai-fg);
+        background: var(--monokai-bg);
+    }
     #editorDialog {
         width: 100%;
     }
@@ -19,6 +52,7 @@
         width: 100%;
     }
 </style>
+<pre id="gitShow"></pre>
 <h1 id="title"></h1>
 <div id="meta"></div>
 <div id="label"></div>
@@ -30,9 +64,11 @@
 </form></dialog>
 <script>
 const ws = new WebSocket("/ws");
+let data = null;
+let updateGitShowTimer = null;
 ws.addEventListener("message", event => {
     console.log(event.data);
-    const data = JSON.parse(event.data);
+    data = JSON.parse(event.data);
     title.className = data.commit.state;
     title.textContent = data.commit.title;
     meta.textContent = `${data.commit.date} – ${data.commit.authors.join(", ")}`;
@@ -84,6 +120,14 @@ ws.addEventListener("message", event => {
         // middle click. likewise for a new window, you can still Shift+click.
         a.target = "anotherWindow";
     }
+
+    // after some delay, update the `git show` output.
+    // rendering the `git show` output can be expensive.
+    if (updateGitShowTimer != null) {
+        clearTimeout(updateGitShowTimer);
+        updateGitShowTimer = null;
+    }
+    updateGitShowTimer = setTimeout(updateGitShow, 50);
 });
 addEventListener("keypress", event => {
     console.log(event);
@@ -110,6 +154,9 @@ addEventListener("keypress", event => {
 // not seem to interfere with typical browser default behaviour.
 addEventListener("wheel", event => {
     console.log(event);
+    if (event.target.id == "gitShow") {
+        return;
+    }
     if (!event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
         return;
     }
@@ -157,5 +204,51 @@ function linkify(parents, regex, hrefFn) {
             }
         }
     }
+}
+function updateGitShow() {
+    updateGitShowTimer = null;
+    gitShow.textContent = data.git_show;
+    renderTerminalOutput(gitShow);
+}
+function renderTerminalOutput(pre) {
+    const startTime = performance.now();
+    // <https://en.wikipedia.org/w/index.php?title=ANSI_escape_code&oldid=1248130213#CSI_(Control_Sequence_Introducer)_sequences>
+    const csiRuns = pre.textContent.match(/\x1B\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7E]|[^\x1B]+|[^]/g);
+    const result = [];
+    let fgColor = 0;
+    for (const run of csiRuns) {
+        if (performance.now() - startTime > 50 /* ms */) {
+            console.warn("renderTerminalOutput() time limit exceeded");
+            return;
+        }
+        const match = run.match(/\x1B\[([\x30-\x3F]*)[\x20-\x2F]*([\x40-\x7E])/);
+        if (match) {
+            const [, params, mode] = match;
+            /* sgr: select graphic rendition */
+            if (mode == "m") {
+                for (const param of params.split(";")) {
+                    const num = parseInt(param || "0", 10);
+                    if (param.length > 0 && `${num}`.length != param.length) {
+                        continue;
+                    }
+                    if (num == 0 || num >= 30 && num <= 37 || num >= 90 && num <= 97) {
+                        fgColor = num;
+                    }
+                }
+            }
+        } else {
+            if (fgColor != 0) {
+                const span = document.createElement("span");
+                span.style.color = `var(--sgr-${fgColor})`;
+                span.append(run);
+                result.push(span);
+            } else {
+                const text = document.createTextNode(run);
+                result.push(text);
+            }
+        }
+    }
+    pre.innerHTML = "";
+    pre.append(...result);
 }
 </script>

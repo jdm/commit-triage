@@ -68,9 +68,14 @@ pub fn update(commit: &Commit) {
     options.render.r#unsafe = true;
     let unsafe_body = markdown_to_html(&commit.body.join("\n"), &options);
     let body = ammonia::clean(&unsafe_body);
+    // TODO: don’t hardcode path
+    let git_show =
+        std::fs::read_to_string(format!("/home/delan/code/servo.org/cache/{}", commit.hash))
+            .unwrap_or_else(|_| "".to_owned());
     let content = Response {
         commit: commit.clone(),
         rendered_body: body,
+        git_show,
     };
     *CONTENT.write().unwrap() = serde_json::to_string(&content).unwrap();
     UPDATE.0.send(()).unwrap();
@@ -138,6 +143,7 @@ pub enum Action {
 struct Response {
     commit: Commit,
     rendered_body: String,
+    git_show: String,
 }
 
 #[derive(Deserialize)]

@@ -207,21 +207,32 @@ function linkify(parents, regex, hrefFn) {
 }
 function updateGitShow() {
     updateGitShowTimer = null;
-    gitShow.textContent = data.git_show;
-    renderTerminalOutput(gitShow);
+    renderTerminalOutput(gitShow, data.git_show);
 }
-function renderTerminalOutput(pre) {
+let renderTerminalOutputEpoch = 0;
+function renderTerminalOutput(pre, text) {
+    renderTerminalOutputEpoch += 1;
+    pre.innerHTML = "";
+    renderTerminalOutputTick(renderTerminalOutputEpoch, pre, text, 0);
+}
+function renderTerminalOutputTick(epoch, pre, text, startIndex) {
+    if (epoch != renderTerminalOutputEpoch) {
+        console.warn("renderTerminalOutput() cancelled");
+        return;
+    }
     const startTime = performance.now();
     // <https://en.wikipedia.org/w/index.php?title=ANSI_escape_code&oldid=1248130213#CSI_(Control_Sequence_Introducer)_sequences>
-    const csiRuns = pre.textContent.match(/\x1B\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7E]|[^\x1B]+|[^]/g);
-    const result = [];
+    const csiRuns = /\x1B\[[\x30-\x3F]*[\x20-\x2F]*[\x40-\x7E]|[^\x1B]+|[^]/g;
+    csiRuns.lastIndex = startIndex;
+
+    let runMatch;
     let fgColor = 0;
-    for (const run of csiRuns) {
-        if (performance.now() - startTime > 50 /* ms */) {
-            console.warn("renderTerminalOutput() time limit exceeded");
-            return;
-        }
+    while ((runMatch = csiRuns.exec(text)) != null) {
+        const [run] = runMatch;
         const match = run.match(/\x1B\[([\x30-\x3F]*)[\x20-\x2F]*([\x40-\x7E])/);
+        // branches labelled “optimise” significantly reduce the number of
+        // nodes in the DOM tree, without any observable changes to rendering.
+        // they can be removed if they turn out to be buggy.
         if (match) {
             const [, params, mode] = match;
             /* sgr: select graphic rendition */
@@ -236,19 +247,49 @@ function renderTerminalOutput(pre) {
                     }
                 }
             }
-        } else {
-            if (fgColor != 0) {
+        } else if (run == "\n" && pre.lastChild) {
+            // optimise runs of only a newline, for example:
+            // `\033[30m...\033[m\n\033[31m...`
+            if (pre.lastChild.nodeName == "#text") {
+                pre.lastChild.nodeValue += run;
+            } else {
+                pre.lastChild.firstChild.nodeValue += run;
+            }
+        } else if (fgColor != 0) {
+            if (pre.lastChild?.dataset?.sgr == `${fgColor}`) {
+                // optimise back-to-back runs of the same colour, for example:
+                // `\033[30m...\033[30m...`
+                pre.lastChild.firstChild.nodeValue += run;
+            } else {
                 const span = document.createElement("span");
+                span.dataset.sgr = `${fgColor}`;
                 span.style.color = `var(--sgr-${fgColor})`;
                 span.append(run);
-                result.push(span);
+                pre.append(span);
+            }
+        } else if (fgColor == 0) {
+            if (pre.lastChild?.nodeName == "#text") {
+                // optimise back-to-back runs with no colour, for example:
+                // `\033[m...\033[m...`
+                pre.lastChild.nodeValue += run;
             } else {
-                const text = document.createTextNode(run);
-                result.push(text);
+                pre.append(run);
             }
         }
+        // cap the render at a reasonable number of nodes.
+        if (pre.childNodes.length >= 10000) {
+            console.warn(`renderTerminalOutput() node limit exceeded: ${pre.childNodes.length} nodes, ${pre.textContent.split("\n").length}/${text.split("\n").length} lines`);
+            pre.append("\n\n>>> renderTerminalOutput() node limit exceeded (see console)");
+            return;
+        }
+        // render in chunks of up to 15ms at a time.
+        // this does not include the time taken to reflow or paint.
+        if (performance.now() - startTime > 15) {
+            console.warn("renderTerminalOutput() time limit exceeded");
+            requestAnimationFrame(() => void renderTerminalOutputTick(epoch, pre, text, csiRuns.lastIndex));
+            return;
+        }
     }
-    pre.innerHTML = "";
-    pre.append(...result);
+    console.log(`renderTerminalOutput() done: ${pre.childNodes.length} nodes, ${pre.textContent.split("\n").length}/${text.split("\n").length} lines`);
 }
 </script>

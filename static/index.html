@@ -23,6 +23,17 @@
         --sgr-96: /* Terminal ANSI Bright Cyan */ #66d9ef;
         --sgr-97: /* Terminal ANSI Bright White */ #f8f8f2;
     }
+    body {
+        display: flex;
+        flex-flow: row wrap;
+        gap: 1em;
+        margin: 0 1em;
+    }
+    main {
+        flex: 1 0 40rem;
+        /* avoid wide <img width> causing flex wrap */
+        width: 40rem;
+    }
     #title {
         font-weight: normal;
     }
@@ -36,10 +47,9 @@
         color: green;
     }
     #gitShow {
-        float: right;
-        width: 50vw;
-        height: calc(100vh - 4em);
-        margin: 0 1em;
+        flex: 1 0 40rem;
+        max-height: 100vh;
+        margin: 0;
         padding: 0.5em;
         overflow: scroll;
         color: var(--monokai-fg);
@@ -52,13 +62,15 @@
         width: 100%;
     }
 </style>
+<main>
+    <h1 id="title"></h1>
+    <div id="meta"></div>
+    <div id="label"></div>
+    <ul id="hints"></ul>
+    <hr>
+    <div id="content"></div>
+</main>
 <pre id="gitShow"></pre>
-<h1 id="title"></h1>
-<div id="meta"></div>
-<div id="label"></div>
-<ul id="hints"></ul>
-<hr>
-<div id="content"></div>
 <dialog id="editorDialog"><form id="editorForm" method="dialog">
     <input id="input" autofocus size="100">
 </form></dialog>

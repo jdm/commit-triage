@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
 use clap::Parser;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use futures::StreamExt;
 use ratatui::{
     DefaultTerminal, Frame,
     buffer::Buffer,
@@ -54,7 +55,8 @@ pub struct App {
     cursor_pos: Cell<Option<(u16, u16)>>,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
     let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
     if args.sort_by_author {
@@ -78,14 +80,19 @@ fn main() {
         byte_index: 0,
         cursor_pos: Cell::new(None),
     };
-    ratatui::run(|terminal| app.run(terminal)).unwrap();
+
+    // basically ratatui::run(), but that API is incompatible with async App::run(),
+    // so we need to reimplement it here.
+    let mut terminal = ratatui::init();
+    app.run(&mut terminal).await.unwrap();
+    ratatui::restore();
 
     write_to_file(&app.commits, &app.path, None).unwrap();
 }
 
 impl App {
     /// runs the application's main loop until the user quits
-    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+    pub async fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         if let Some(index) = self
             .commits
             .iter()
@@ -100,9 +107,12 @@ impl App {
             self.index = index;
         }
 
+        let mut events = EventStream::new();
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            self.handle_events(terminal)?;
+            if let Some(Ok(event)) = events.next().await {
+                self.handle_event(terminal, event)?;
+            }
         }
         Ok(())
     }
@@ -114,8 +124,8 @@ impl App {
         }
     }
 
-    fn handle_events(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
-        match event::read()? {
+    fn handle_event(&mut self, terminal: &mut DefaultTerminal, event: Event) -> io::Result<()> {
+        match event {
             // it's important to check that the event is a key press event as
             // crossterm also emits key release and repeat events on Windows.
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {

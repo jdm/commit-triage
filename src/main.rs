@@ -1,9 +1,12 @@
+pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
+
 //use ratatui::{DefaultTerminal, Frame};
 use std::cell::Cell;
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::LazyLock;
 
 use clap::Parser;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -28,7 +31,7 @@ mod commit;
 mod web;
 
 #[derive(clap::Parser)]
-struct Args {
+pub struct Args {
     commits_txt_path: PathBuf,
 
     /// update commit data from another commits.txt
@@ -42,6 +45,10 @@ struct Args {
     /// filter commits to those containing this text
     #[arg(long)]
     filter_text_containing: Option<String>,
+
+    /// start web server on this port
+    #[arg(long)]
+    web_server_port: Option<u16>,
 }
 
 #[derive(Debug)]
@@ -74,23 +81,29 @@ async fn main() {
         })
         .init();
 
-    let args = Args::parse();
+    let args = &ARGS;
     let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
     if args.sort_by_author {
         commits.sort_by(|p, q| p.authors.cmp(&q.authors));
     }
-    if let Some(other_commits_txt_path) = args.update_commit_data {
-        let other_commits = parse_from_file(&other_commits_txt_path).unwrap();
+    if let Some(other_commits_txt_path) = args.update_commit_data.as_ref() {
+        let other_commits = parse_from_file(other_commits_txt_path).unwrap();
         write_to_file(&commits, &args.commits_txt_path, Some(&other_commits)).unwrap();
         return;
     }
 
-    let web_server = std::thread::spawn(crate::web::server);
+    let web_server = std::thread::spawn(move || {
+        if args.web_server_port.is_some() {
+            crate::web::server()
+        } else {
+            Ok(())
+        }
+    });
 
     let mut app = App {
         index: 0,
-        path: args.commits_txt_path,
-        filter_text_containing: args.filter_text_containing,
+        path: args.commits_txt_path.clone(),
+        filter_text_containing: args.filter_text_containing.clone(),
         commits,
         edit_tag: false,
         unroll: false,
@@ -106,9 +119,11 @@ async fn main() {
     app.run(&mut terminal).await.unwrap();
     ratatui::restore();
 
-    eprintln!("shutting down...");
-    crate::web::SHUTDOWN.get().unwrap().clone().notify();
-    web_server.join().unwrap().unwrap();
+    if args.web_server_port.is_some() {
+        eprintln!("shutting down...");
+        crate::web::shutdown();
+        web_server.join().unwrap().unwrap();
+    }
 
     write_to_file(&app.commits, &app.path, None).unwrap();
 }

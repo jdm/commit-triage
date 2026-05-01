@@ -15,7 +15,7 @@ use rocket_ws::Message;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::commit::Commit;
+use crate::{ARGS, commit::Commit};
 
 pub static SHUTDOWN: OnceLock<rocket::Shutdown> = OnceLock::new();
 
@@ -40,6 +40,7 @@ pub static ACTION: LazyLock<(mpsc::Sender<Action>, Mutex<mpsc::Receiver<Action>>
 #[rocket::main]
 pub async fn server() -> Result<(), rocket::Error> {
     let config = Config {
+        port: ARGS.web_server_port.unwrap(),
         shutdown: rocket::config::Shutdown {
             grace: 0,
             mercy: 0,
@@ -57,6 +58,10 @@ pub async fn server() -> Result<(), rocket::Error> {
 
     rocket.launch().await?;
     Ok(())
+}
+
+pub fn shutdown() {
+    crate::web::SHUTDOWN.get().unwrap().clone().notify();
 }
 
 pub fn update(commit: &Commit) {

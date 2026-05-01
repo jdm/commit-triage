@@ -61,7 +61,7 @@ ws.addEventListener("message", event => {
 });
 addEventListener("keypress", event => {
     console.log(event);
-    if (editorDialog.open) {
+    if (editorDialog.open || gotoDialog.open) {
         return;
     }
     switch (event.key) {
@@ -74,6 +74,11 @@ addEventListener("keypress", event => {
         break;
     case "t":
         editorDialog.showModal();
+        break;
+    case "g":
+        gotoDialog.showModal();
+        gotoInput.value = commit.commit.hash_number.slice(1);
+        gotoInput.select();
         break;
     default:
         ws.send(JSON.stringify({"Keypress": event.key}));
@@ -106,6 +111,14 @@ editorDialog.addEventListener("close", event => {
 editorForm.addEventListener("submit", event => {
     console.log(event);
     ws.send(JSON.stringify({"SetLabel": input.value}));
+});
+gotoDialog.addEventListener("close", event => {
+    console.log(event);
+    ws.send(JSON.stringify({"Reload": null}));
+});
+gotoForm.addEventListener("submit", event => {
+    console.log(event);
+    ws.send(JSON.stringify({"GoToCommit": gotoInput.value}));
 });
 function linkify(parents, regex, hrefFn) {
     for (const parent of parents) {

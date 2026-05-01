@@ -174,6 +174,12 @@ impl App {
                             self.commit_tag(true);
                             crate::web::update(&self.commits[self.index]);
                         },
+                        Action::GoToCommit(number) => {
+                            if let Some((index, commit)) = self.commits.iter().enumerate().find(|(_, commit)| commit.hash_number.strip_prefix("#") == Some(&number)) {
+                                self.index = index;
+                                crate::web::update(commit);
+                            }
+                        },
                     }
                 },
             }

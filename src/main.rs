@@ -49,6 +49,10 @@ pub struct Args {
     /// start web server on this port
     #[arg(long)]
     web_server_port: Option<u16>,
+
+    /// read `git show` outputs from this directory
+    #[arg(long)]
+    git_show_output_cache_path: Option<PathBuf>,
 }
 
 #[derive(Debug)]

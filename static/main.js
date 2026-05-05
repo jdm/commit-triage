@@ -6,7 +6,7 @@ window.renderSearchDialog = renderSearchDialog;
 window.updateWordCloud = updateWordCloud;
 
 const ws = new WebSocket("/ws");
-let commit = null, commits = null;
+let commit = null, commits = null, filteredCommits = null;
 let searchFirstTime = true;
 let wordCloudFirstTime = true;
 ws.addEventListener("message", event => {
@@ -79,6 +79,17 @@ addEventListener("keypress", event => {
         // quit the `git show` pager without focusing the terminal, you would
         // quit the commit-triage tool by mistake. so we prevent that.
         break;
+    case "-":
+    case "+":
+        ws.send(JSON.stringify({"Keypress": event.key}));
+        traverseCommits(+1);
+        break;
+    case "J":
+        traverseCommits(+1);
+        break;
+    case "K":
+        traverseCommits(-1);
+        break;
     case "t":
         editorDialog.showModal();
         break;
@@ -90,11 +101,7 @@ addEventListener("keypress", event => {
     case "/":
         // suppress firefox “quick find”
         event.preventDefault();
-        searchDialog.showModal();
-        if (searchFirstTime) {
-            searchFirstTime = false;
-            updateSearch();
-        }
+        openSearchDialog();
         break;
     case "w":
         wordCloudDialog.showModal();
@@ -119,11 +126,11 @@ addEventListener("wheel", event => {
         return;
     }
     if (event.deltaY > 0) {
-        ws.send(JSON.stringify({"Keypress": "j"}));
+        traverseCommits(+1);
         return;
     }
     if (event.deltaY < 0) {
-        ws.send(JSON.stringify({"Keypress": "k"}));
+        traverseCommits(-1);
         return;
     }
 });
@@ -143,8 +150,15 @@ gotoForm.addEventListener("submit", event => {
     console.log(event);
     goToCommit(gotoInput.value);
 });
+openSearchDialog();
+
 function goToCommit(number) {
     ws.send(JSON.stringify({"GoToCommit": number}));
+}
+function traverseCommits(delta) {
+    const oldIndex = filteredCommits.map(commit => commit.hash_number).indexOf(commit.commit.hash_number);
+    const newIndex = oldIndex >= 0 ? (oldIndex + delta + filteredCommits.length) % filteredCommits.length : 0;
+    goToCommit(filteredCommits[newIndex].hash_number.slice(1));
 }
 async function updateSearch() {
     const response = await fetch("/commits");
@@ -152,11 +166,18 @@ async function updateSearch() {
     console.log(commits);
     renderSearchDialog();
 }
+function openSearchDialog() {
+    searchDialog.showModal();
+    if (searchFirstTime) {
+        searchFirstTime = false;
+        updateSearch();
+    }
+}
 function renderSearchDialog() {
     const filterFn = searchFilter.value.length > 0
         ? eval(`commit => ${searchFilter.value}`)
         : _commits => true;
-    const filteredCommits = commits.filter(commit => filterFn(commit));
+    filteredCommits = commits.filter(commit => filterFn(commit));
     // only clear the <pre> if the filtering ran without throwing.
     const pre = searchDialog.querySelector("pre");
     pre.innerHTML = `${filteredCommits.length}/${commits.length} commits:\n`;

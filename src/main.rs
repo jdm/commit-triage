@@ -169,7 +169,7 @@ impl App {
             terminal.draw(|frame| self.draw(frame))?;
             tokio::select! {
                 Some(Ok(event)) = terminal_events.next() => {
-                    self.handle_event(terminal, event)?;
+                    self.handle_terminal_event(terminal, event);
                 },
                 Some(action) = web_actions.recv() => {
                     match action {
@@ -179,7 +179,7 @@ impl App {
                                 if key.is_ascii_uppercase() {
                                     key_event.modifiers = KeyModifiers::SHIFT;
                                 }
-                                self.handle_event(terminal, Event::Key(key_event))?;
+                                self.handle_key_event(key_event, true);
                             }
                         },
                         Action::SetLabel(label) => {
@@ -213,22 +213,23 @@ impl App {
         }
     }
 
-    fn handle_event(&mut self, terminal: &mut DefaultTerminal, event: Event) -> io::Result<()> {
+    fn handle_terminal_event(&mut self, terminal: &mut DefaultTerminal, event: Event) {
         match event {
             // it's important to check that the event is a key press event as
             // crossterm also emits key release and repeat events on Windows.
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                self.handle_key_event(key_event, terminal)
+                if key_event.code == KeyCode::Char('l')
+                    && key_event.modifiers == KeyModifiers::CONTROL
+                {
+                    terminal.clear().unwrap();
+                }
+                self.handle_key_event(key_event, false)
             }
             _ => {}
-        };
-        Ok(())
+        }
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent, terminal: &mut DefaultTerminal) {
-        if key_event.code == KeyCode::Char('l') && key_event.modifiers == KeyModifiers::CONTROL {
-            terminal.clear().unwrap();
-        }
+    fn handle_key_event(&mut self, key_event: KeyEvent, for_web: bool) {
         if !self.edit_tag {
             let has_shift = key_event.modifiers.contains(KeyModifiers::SHIFT);
             match key_event.code {
@@ -236,8 +237,8 @@ impl App {
                 KeyCode::Char('j') | KeyCode::Char('J') => self.next_index(has_shift),
                 KeyCode::Char('k') | KeyCode::Char('K') => self.prev_index(has_shift),
                 KeyCode::Char('o') => self.open_url(),
-                KeyCode::Char('+') => self.update_state(State::Accepted),
-                KeyCode::Char('-') => self.update_state(State::Ignored),
+                KeyCode::Char('+') => self.update_state(State::Accepted, for_web),
+                KeyCode::Char('-') => self.update_state(State::Ignored, for_web),
                 KeyCode::Char(' ') => self.unroll = !self.unroll,
                 KeyCode::Char('t') => self.open_tag_editor(),
                 _ => {}
@@ -389,9 +390,11 @@ impl App {
         crate::web::update(&self.commits[self.index]);
     }
 
-    fn update_state(&mut self, state: State) {
+    fn update_state(&mut self, state: State, for_web: bool) {
         self.commits[self.index].state = state;
-        self.next_index(true);
+        if !for_web {
+            self.next_index(true);
+        }
         write_to_file(&self.commits, &self.path, None).unwrap();
     }
 

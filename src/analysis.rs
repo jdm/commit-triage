@@ -41,7 +41,7 @@ pub fn compute_word_cloud(commits: &[Commit]) -> Result<WordCloud, &'static str>
     }
     let mut frequency: BTreeMap<String, WordInfo> = BTreeMap::default();
     for commit in commits {
-        if commit.state != State::Untriaged {
+        if !commit.label.is_empty() || commit.state != State::Untriaged {
             continue;
         }
         let words = commit

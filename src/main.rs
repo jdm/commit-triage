@@ -193,6 +193,9 @@ impl App {
                                 crate::web::update(commit);
                             }
                         },
+                        Action::GetCommits(tx) => {
+                            tx.send(self.commits.clone()).unwrap();
+                        },
                         Action::GetWordCloud(tx) => {
                             tx.send(compute_word_cloud(&self.commits)).unwrap();
                         },

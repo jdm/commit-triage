@@ -70,6 +70,24 @@
         flex: 1 1 auto;
         overflow: scroll;
     }
+    #searchDialog[open] {
+        min-width: 60%;
+        display: flex;
+        flex-flow: column nowrap;
+        overflow: hidden;
+    }
+    #searchDialog div {
+        display: flex;
+        flex-flow: row nowrap;
+        gap: 1em;
+    }
+    #searchDialog input {
+        flex: 1 1 auto;
+    }
+    #searchDialog pre {
+        flex: 1 1 auto;
+        overflow: scroll;
+    }
     #input {
         width: 100%;
     }
@@ -89,6 +107,16 @@
 <dialog id="gotoDialog"><form id="gotoForm" method="dialog">
     #<input id="gotoInput" autofocus>
 </form></dialog>
+<dialog id="searchDialog">
+    <div>
+        <button onclick="updateSearch()">update</button>
+        <input id="searchFilter" placeholder="JS filter (commit => ...)"
+            value='commit.state == "Untriaged" && !commit.authors.includes("@servo-wpt-sync") && !commit.authors.includes("@dependabot[bot]")'
+            onchange="renderSearchDialog()" oninput="renderSearchDialog()">
+    </div>
+    <!-- tabindex + autofocus to avoid scrolling to top on every showModal() -->
+    <pre tabindex="-1" autofocus></pre>
+</dialog>
 <dialog id="wordCloudDialog">
     <button onclick="updateWordCloud()">update</button>
     <!-- tabindex + autofocus to avoid scrolling to top on every showModal() -->

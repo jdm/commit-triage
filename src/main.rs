@@ -1,8 +1,12 @@
+pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
+
 //use ratatui::{DefaultTerminal, Frame};
 use std::cell::Cell;
+use std::fs::File;
 use std::io;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::LazyLock;
 
 use clap::Parser;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -16,13 +20,18 @@ use ratatui::{
     text::{Line, Text},
     widgets::{Block, Padding, Paragraph, Widget},
 };
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
+use crate::web::Action;
 
 mod commit;
+mod web;
 
 #[derive(clap::Parser)]
-struct Args {
+pub struct Args {
     commits_txt_path: PathBuf,
 
     /// update commit data from another commits.txt
@@ -36,6 +45,14 @@ struct Args {
     /// filter commits to those containing this text
     #[arg(long)]
     filter_text_containing: Option<String>,
+
+    /// start web server on this port
+    #[arg(long)]
+    web_server_port: Option<u16>,
+
+    /// read `git show` outputs from this directory
+    #[arg(long)]
+    git_show_output_cache_path: Option<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -57,21 +74,40 @@ pub struct App {
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
+    // suppress rocket’s default logging to terminal.
+    // you can also read the logs by changing `/dev/null` to some other path.
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer().with_writer(File::create("/dev/null").unwrap()))
+        .with(if std::env::var("RUST_LOG").is_ok() {
+            EnvFilter::builder().from_env_lossy()
+        } else {
+            "commit_triage=info,rocket=info".parse().unwrap()
+        })
+        .init();
+
+    let args = &ARGS;
     let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
     if args.sort_by_author {
         commits.sort_by(|p, q| p.authors.cmp(&q.authors));
     }
-    if let Some(other_commits_txt_path) = args.update_commit_data {
-        let other_commits = parse_from_file(&other_commits_txt_path).unwrap();
+    if let Some(other_commits_txt_path) = args.update_commit_data.as_ref() {
+        let other_commits = parse_from_file(other_commits_txt_path).unwrap();
         write_to_file(&commits, &args.commits_txt_path, Some(&other_commits)).unwrap();
         return;
     }
 
+    let web_server = std::thread::spawn(move || {
+        if args.web_server_port.is_some() {
+            crate::web::server()
+        } else {
+            Ok(())
+        }
+    });
+
     let mut app = App {
         index: 0,
-        path: args.commits_txt_path,
-        filter_text_containing: args.filter_text_containing,
+        path: args.commits_txt_path.clone(),
+        filter_text_containing: args.filter_text_containing.clone(),
         commits,
         edit_tag: false,
         unroll: false,
@@ -86,6 +122,12 @@ async fn main() {
     let mut terminal = ratatui::init();
     app.run(&mut terminal).await.unwrap();
     ratatui::restore();
+
+    if args.web_server_port.is_some() {
+        eprintln!("shutting down...");
+        crate::web::shutdown();
+        web_server.join().unwrap().unwrap();
+    }
 
     write_to_file(&app.commits, &app.path, None).unwrap();
 }
@@ -106,12 +148,34 @@ impl App {
         {
             self.index = index;
         }
+        crate::web::update(&self.commits[self.index]);
 
-        let mut events = EventStream::new();
+        let mut terminal_events = EventStream::new();
+        let mut web_actions = crate::web::ACTION.1.lock().await;
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
-            if let Some(Ok(event)) = events.next().await {
-                self.handle_event(terminal, event)?;
+            tokio::select! {
+                Some(Ok(event)) = terminal_events.next() => {
+                    self.handle_event(terminal, event)?;
+                },
+                Some(action) = web_actions.recv() => {
+                    match action {
+                        Action::Keypress(keys) => {
+                            for key in keys.chars() {
+                                let mut key_event = KeyEvent::new(KeyCode::Char(key), KeyModifiers::empty());
+                                if key.is_ascii_uppercase() {
+                                    key_event.modifiers = KeyModifiers::SHIFT;
+                                }
+                                self.handle_event(terminal, Event::Key(key_event))?;
+                            }
+                        },
+                        Action::SetLabel(label) => {
+                            self.input = label;
+                            self.commit_tag(true);
+                            crate::web::update(&self.commits[self.index]);
+                        },
+                    }
+                },
             }
         }
         Ok(())
@@ -273,6 +337,7 @@ impl App {
                 break;
             }
         }
+        crate::web::update(&self.commits[self.index]);
     }
 
     fn prev_index(&mut self, shift: bool) {
@@ -296,6 +361,7 @@ impl App {
                 break;
             }
         }
+        crate::web::update(&self.commits[self.index]);
     }
 
     fn update_state(&mut self, state: State) {

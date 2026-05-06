@@ -2,7 +2,9 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+use serde::Serialize;
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
 pub enum State {
     #[default]
     Untriaged,
@@ -10,7 +12,7 @@ pub enum State {
     Accepted,
 }
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct Commit {
     pub index_in_file: usize,
     pub url: String,

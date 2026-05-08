@@ -42,6 +42,10 @@ pub struct Args {
     #[arg(long)]
     sort_by_author: bool,
 
+    /// sort by tags, instead of the file’s original order
+    #[arg(long)]
+    sort_by_tags: bool,
+
     /// filter commits to those containing this text
     #[arg(long)]
     filter_text_containing: Option<String>,
@@ -89,6 +93,9 @@ async fn main() {
     let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
     if args.sort_by_author {
         commits.sort_by(|p, q| p.authors.cmp(&q.authors));
+    }
+    if args.sort_by_tags {
+        commits.sort_by(|p, q| p.tags().cmp(q.tags()));
     }
     if let Some(other_commits_txt_path) = args.update_commit_data.as_ref() {
         let other_commits = parse_from_file(other_commits_txt_path).unwrap();

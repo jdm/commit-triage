@@ -28,6 +28,13 @@ pub struct Commit {
 }
 
 impl Commit {
+    pub fn tags(&self) -> &str {
+        if let Some((tags, _notes)) = self.label.split_once(";") {
+            return tags;
+        }
+        &self.label
+    }
+
     pub fn filter_text(&self) -> String {
         let mut lines = vec![self.title.clone(), self.authors.join(", ")];
         lines.extend_from_slice(&self.hints);

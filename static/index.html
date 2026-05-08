@@ -58,6 +58,9 @@
     #editorDialog {
         width: 100%;
     }
+    #gotoDialog {
+        width: max-content;
+    }
     #input {
         width: 100%;
     }
@@ -73,5 +76,8 @@
 <pre id="gitShow"></pre>
 <dialog id="editorDialog"><form id="editorForm" method="dialog">
     <input id="input" autofocus size="100">
+</form></dialog>
+<dialog id="gotoDialog"><form id="gotoForm" method="dialog">
+    #<input id="gotoInput" autofocus>
 </form></dialog>
 <script type="module" src="main.js"></script>

@@ -126,6 +126,10 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
                                 info!(?label, "setting label");
                                 ACTION.0.send(Action::SetLabel(label)).await.unwrap();
                             },
+                            Request::GoToCommit(number) => {
+                                info!(?number, "go to commit requested");
+                                ACTION.0.send(Action::GoToCommit(number)).await.unwrap();
+                            },
                             Request::Reload => {
                                 info!("reload requested");
                                 // send the current content
@@ -143,6 +147,7 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
 pub enum Action {
     Keypress(String),
     SetLabel(String),
+    GoToCommit(String),
 }
 
 #[derive(Serialize)]
@@ -156,5 +161,6 @@ struct Response {
 enum Request {
     Keypress(String),
     SetLabel(String),
+    GoToCommit(String),
     Reload,
 }

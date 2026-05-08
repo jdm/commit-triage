@@ -3,6 +3,7 @@ use std::{
     sync::LazyLock,
 };
 
+use encoding_rs::WINDOWS_1252;
 use serde::Serialize;
 
 use crate::{
@@ -23,7 +24,11 @@ pub struct WordCloudEntry {
 
 pub fn compute_word_cloud(commits: &[Commit]) -> Result<WordCloud, &'static str> {
     static DICTIONARY: LazyLock<Option<BTreeSet<String>>> = LazyLock::new(|| {
-        let file = std::fs::read_to_string(&*ARGS.dictionary_path).ok()?;
+        let file = std::fs::read(&*ARGS.dictionary_path).ok()?;
+        // according to file(1), scowl-2020.12.07 /share/dict/words.txt is
+        // ISO-8859 text, and ~300 words rely on this. decode it as
+        // Windows-1252, which is a superset of ISO 8859-1.
+        let (file, _actual_encoding, _malformed) = WINDOWS_1252.decode(&file);
         Some(file.split("\n").map(|word| word.to_owned()).collect())
     });
     let dictionary = DICTIONARY

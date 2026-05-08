@@ -96,7 +96,9 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
     let mut commit = Commit::default();
     let mut started_first_commit = false;
     let mut current_date = String::new();
-    for line in contents.lines() {
+    let mut has_bad_input = false;
+    for (line_index, line) in contents.lines().enumerate() {
+        let line_number = line_index + 1;
         if line.starts_with(">>>") {
             current_date = line.strip_prefix(">>> ").unwrap().to_owned();
             continue;
@@ -117,9 +119,15 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
                 commit.label = rest.to_owned();
                 continue;
             }
-            commits.push(commit);
-            commit = Commit::default();
-            commit.index_in_file = commits.len();
+            if line.starts_with("https://") || line.starts_with(['-', '+']) {
+                commits.push(commit);
+                commit = Commit::default();
+                commit.index_in_file = commits.len();
+            } else {
+                eprintln!("bad input on line {line_number}: {line:?}");
+                has_bad_input = true;
+                continue;
+            }
         }
         started_first_commit = true;
         commit.date = current_date.clone();
@@ -155,6 +163,12 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
         commit.title = parts.next().unwrap().to_owned();
     }
     commits.push(commit);
+    if has_bad_input {
+        panic!(
+            "bad input! has the format changed? \
+            if not, remove the lines above and try again"
+        );
+    }
     commits
 }
 
@@ -230,5 +244,28 @@ mod test {
             }
         ];
         assert_eq!(commits, expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_bad_input() {
+        let contents = r#">>> 2026-04-19T23:41:46Z
+https://github.com/servo/servo/pull/44339   (@servo-wpt-sync, #44339)   Sync WPT with upstream (19-04-2026) (#44339)
+    ^ commit 345fd4573f5a4d8cb3d0efe7a128ddfe6043db8b
+warning: exhaustive rename detection was skipped due to too many files.
+warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
+warning: exhaustive rename detection was skipped due to too many files.
+warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
+warning: exhaustive rename detection was skipped due to too many files.
+warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
+warning: exhaustive rename detection was skipped due to too many files.
+warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
+warning: exhaustive rename detection was skipped due to too many files.
+warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
+warning: exhaustive rename detection was skipped due to too many files.
+warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
+    # Automated downstream sync of changes from upstream as of 19-04-2026
+    # [no-wpt-sync]"#;
+        let commits = parse_from_str(contents);
     }
 }

@@ -1,22 +1,22 @@
 import { debouncedUpdateGitShow } from "./git-show.js";
 
 const ws = new WebSocket("/ws");
-let data = null;
+let commit = null;
 ws.addEventListener("message", event => {
     console.log(event.data);
-    data = JSON.parse(event.data);
-    title.className = data.commit.state;
-    title.textContent = data.commit.title;
-    meta.textContent = `${data.commit.date} – ${data.commit.authors.join(", ")}`;
-    label.textContent = data.commit.label;
+    commit = JSON.parse(event.data);
+    title.className = commit.commit.state;
+    title.textContent = commit.commit.title;
+    meta.textContent = `${commit.commit.date} – ${commit.commit.authors.join(", ")}`;
+    label.textContent = commit.commit.label;
     hints.innerHTML = "";
-    for (const hint of data.commit.hints) {
+    for (const hint of commit.commit.hints) {
         const li = document.createElement("li");
         li.append(hint);
         hints.append(li);
     }
-    content.innerHTML = data.rendered_body;
-    input.value = data.commit.label;
+    content.innerHTML = commit.rendered_body;
+    input.value = commit.commit.label;
 
     // linkify any text that looks like a qualified issue reference. to avoid
     // false positives, only consider direct descendant text nodes of <p>.
@@ -57,7 +57,7 @@ ws.addEventListener("message", event => {
         a.target = "anotherWindow";
     }
 
-    debouncedUpdateGitShow(data.git_show);
+    debouncedUpdateGitShow(commit.git_show);
 });
 addEventListener("keypress", event => {
     console.log(event);

@@ -1,0 +1,137 @@
+import { debouncedUpdateGitShow } from "./git-show.js";
+
+const ws = new WebSocket("/ws");
+let commit = null;
+ws.addEventListener("message", event => {
+    console.log(event.data);
+    commit = JSON.parse(event.data);
+    title.className = commit.commit.state;
+    title.textContent = commit.commit.title;
+    meta.textContent = `${commit.commit.date} – ${commit.commit.authors.join(", ")}`;
+    label.textContent = commit.commit.label;
+    hints.innerHTML = "";
+    for (const hint of commit.commit.hints) {
+        const li = document.createElement("li");
+        li.append(hint);
+        hints.append(li);
+    }
+    content.innerHTML = commit.rendered_body;
+    input.value = commit.commit.label;
+
+    // linkify any text that looks like a qualified issue reference. to avoid
+    // false positives, only consider direct descendant text nodes of <p>.
+    linkify(
+        content.querySelectorAll("p"), /([0-9A-Za-z-]+)[/]([^ ]+)#([0-9]+)/gd,
+        (linkText, owner, repo, number) => `https://github.com/${owner}/${repo}/issues/${number}`,
+    );
+
+    // linkify any text that looks like github issue references. but to avoid
+    // false positives, only consider direct descendant text nodes of <p>,
+    // plus the commit title line.
+    linkify(
+        [title, ...content.querySelectorAll("p")], /#[0-9]+/gd,
+        linkText => `https://github.com/servo/servo/issues/${linkText.slice(1)}`,
+    );
+
+    // linkify any text that looks like github user mentions. but to avoid
+    // false positives, only consider direct descendant text nodes of <p>,
+    // plus the commit authors line.
+    linkify(
+        [meta, ...content.querySelectorAll("p")], /@[0-9A-Za-z-]+/gd,
+        linkText => `https://github.com/${linkText.slice(1)}`,
+    );
+
+    // linkify any text that looks like git commit hashes. but to avoid
+    // false positives, only consider direct descendant text nodes of <p>.
+    linkify(
+        content.querySelectorAll("p"), /\b[0-9a-f]{7,}\b/gd,
+        linkText => `https://github.com/servo/servo/commit/${linkText}`,
+    );
+
+    // make all links open in a separate tab by default.
+    for (const a of document.querySelectorAll(":any-link")) {
+        // like `_blank`, but opens in the same tab every time, so you can keep
+        // this tool and the links you click in two separate windows.
+        // if you want to open in a new tab, you can still use Ctrl+click or
+        // middle click. likewise for a new window, you can still Shift+click.
+        a.target = "anotherWindow";
+    }
+
+    debouncedUpdateGitShow(commit.git_show);
+});
+addEventListener("keypress", event => {
+    console.log(event);
+    if (editorDialog.open) {
+        return;
+    }
+    switch (event.key) {
+    case "q":
+        // require the user to focus the commit-triage TUI to quit.
+        // even though this page is in focus, you may still be able to scroll
+        // through `git show` in a nearby terminal. if you then press `Q` to
+        // quit the `git show` pager without focusing the terminal, you would
+        // quit the commit-triage tool by mistake. so we prevent that.
+        break;
+    case "t":
+        editorDialog.showModal();
+        break;
+    default:
+        ws.send(JSON.stringify({"Keypress": event.key}));
+    }
+});
+// when you Shift+scroll, step through commits.
+// unlike Ctrl+scroll, Alt+scroll, and scrolling without modifiers, this does
+// not seem to interfere with typical browser default behaviour.
+addEventListener("wheel", event => {
+    console.log(event);
+    if (event.target.id == "gitShow") {
+        return;
+    }
+    if (!event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
+        return;
+    }
+    if (event.deltaY > 0) {
+        ws.send(JSON.stringify({"Keypress": "j"}));
+        return;
+    }
+    if (event.deltaY < 0) {
+        ws.send(JSON.stringify({"Keypress": "k"}));
+        return;
+    }
+});
+editorDialog.addEventListener("close", event => {
+    console.log(event);
+    ws.send(JSON.stringify({"Reload": null}));
+});
+editorForm.addEventListener("submit", event => {
+    console.log(event);
+    ws.send(JSON.stringify({"SetLabel": input.value}));
+});
+function linkify(parents, regex, hrefFn) {
+    for (const parent of parents) {
+        for (const kid of parent.childNodes) {
+            if (kid.nodeName != "#text")
+                continue;
+            const originalText = kid.nodeValue;
+            // array of matches
+            // where each match is an array [matchedText, ...captureGroups]
+            // where each element is a pair of indices [start, stop]
+            const matches = [];
+            let result;
+            while ((result = regex.exec(originalText)) != null) {
+                matches.push(result.indices);
+            }
+            matches.reverse();
+            for (const match of matches) {
+                const [matchedText, ...captureGroups] = match;
+                const [start, stop] = matchedText;
+                kid.splitText(stop);
+                const text = kid.splitText(start);
+                const a = document.createElement("a");
+                a.href = hrefFn(...match.map(([start, stop]) => originalText.slice(start, stop)));
+                text.replaceWith(a);
+                a.append(text);
+            }
+        }
+    }
+}

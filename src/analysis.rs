@@ -5,13 +5,10 @@ use std::{
 
 use serde::Serialize;
 
-use crate::commit::{Commit, State};
-
-static WORDS: LazyLock<BTreeSet<&str>> = LazyLock::new(|| {
-    include_str!("../usr/share/dict/words")
-        .split("\n")
-        .collect()
-});
+use crate::{
+    ARGS,
+    commit::{Commit, State},
+};
 
 #[derive(Debug, Default, Serialize)]
 pub struct WordCloud {
@@ -24,7 +21,14 @@ pub struct WordCloudEntry {
     title: String,
 }
 
-pub fn print_word_cloud(commits: &[Commit]) -> WordCloud {
+pub fn compute_word_cloud(commits: &[Commit]) -> Result<WordCloud, &'static str> {
+    static DICTIONARY: LazyLock<Option<BTreeSet<String>>> = LazyLock::new(|| {
+        let file = std::fs::read_to_string(&*ARGS.dictionary_path).ok()?;
+        Some(file.split("\n").map(|word| word.to_owned()).collect())
+    });
+    let dictionary = DICTIONARY
+        .as_ref()
+        .ok_or("failed to read file at --dictionary-path")?;
     let mut result = WordCloud::default();
     #[derive(Default)]
     struct WordInfo {
@@ -62,7 +66,7 @@ pub fn print_word_cloud(commits: &[Commit]) -> WordCloud {
             }
         }
         for word in words.into_iter().collect::<BTreeSet<_>>() {
-            if word.contains(|c: char| c.is_alphanumeric()) && !WORDS.contains(&*word) {
+            if word.contains(|c: char| c.is_alphanumeric()) && !dictionary.contains(&*word) {
                 frequency
                     .entry(word.to_owned())
                     .or_default()
@@ -86,5 +90,5 @@ pub fn print_word_cloud(commits: &[Commit]) -> WordCloud {
             result.words.push((word, entries));
         }
     }
-    result
+    Ok(result)
 }

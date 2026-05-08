@@ -146,7 +146,7 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
 }
 
 #[get("/wordCloud")]
-async fn word_cloud() -> Json<WordCloud> {
+async fn word_cloud() -> Json<Result<WordCloud, &'static str>> {
     info!("word cloud requested");
     let (tx, rx) = oneshot::channel();
     ACTION.0.send(Action::GetWordCloud(tx)).await.unwrap();
@@ -157,7 +157,7 @@ pub enum Action {
     Keypress(String),
     SetLabel(String),
     GoToCommit(String),
-    GetWordCloud(oneshot::Sender<WordCloud>),
+    GetWordCloud(oneshot::Sender<Result<WordCloud, &'static str>>),
 }
 
 #[derive(Serialize)]

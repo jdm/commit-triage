@@ -136,23 +136,27 @@ function goToCommit(number) {
 }
 async function updateWordCloud() {
     const response = await fetch("/wordCloud");
-    const {words} = await response.json();
-    console.log(words);
+    const json = await response.json();
+    console.log(json);
     const pre = wordCloudDialog.querySelector("pre");
     pre.innerHTML = "";
-    for (const [word, entries] of words) {
-        pre.append(`[${entries.length}] ${word}\n`);
-        for (const entry of entries) {
-            const a = document.createElement("a");
-            a.addEventListener("click", event => {
-                event.preventDefault();
-                goToCommit(entry.hash_number.slice(1));
-                wordCloudDialog.close();
-            });
-            a.textContent = entry.hash_number;
-            a.href = `#`;
-            pre.append(a, ` - ${entry.title}\n`);
+    if ("Ok" in json) {
+        for (const [word, entries] of json.Ok.words) {
+            pre.append(`[${entries.length}] ${word}\n`);
+            for (const entry of entries) {
+                const a = document.createElement("a");
+                a.addEventListener("click", event => {
+                    event.preventDefault();
+                    goToCommit(entry.hash_number.slice(1));
+                    wordCloudDialog.close();
+                });
+                a.textContent = entry.hash_number;
+                a.href = `#`;
+                pre.append(a, ` - ${entry.title}\n`);
+            }
         }
+    } else if ("Err" in json) {
+        pre.append(`>>> error: ${json.Err}`);
     }
 }
 function linkify(parents, regex, hrefFn) {

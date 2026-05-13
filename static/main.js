@@ -175,9 +175,9 @@ function openSearchDialog() {
 }
 function renderSearchDialog() {
     const filterFn = searchFilter.value.length > 0
-        ? eval(`commit => ${searchFilter.value}`)
-        : _commits => true;
-    filteredCommits = commits.filter(commit => filterFn(commit));
+        ? eval(`(commit, text) => ${searchFilter.value}`)
+        : (_commits, _text) => true;
+    filteredCommits = commits.filter(commit => filterFn(commit, [titleWithAbbreviatedHints(commit), ...commit.body].join("\n")));
     // only clear the <pre> if the filtering ran without throwing.
     const pre = searchDialog.querySelector("pre");
     pre.innerHTML = `${filteredCommits.length}/${commits.length} commits:\n`;
@@ -190,30 +190,30 @@ function renderSearchDialog() {
         });
         a.textContent = commit.hash_number;
         a.href = `#`;
-        const displayedHints = [];
+        pre.append(a, ` - ${titleWithAbbreviatedHints(commit)}\n`);
+    }
+
+    function titleWithAbbreviatedHints(commit) {
+        let result = "";
         if (commit.hints.some(hint => hint.includes("/!\\ contains changes to WPT expectations!"))) {
-            displayedHints.push("wpt");
+            result += "[wpt] ";
         }
         if (commit.hints.some(hint => hint.includes("/!\\ contains libservo changes!"))) {
-            displayedHints.push("lib");
+            result += "[lib] ";
         }
         if (commit.hints.some(hint => hint.includes("/!\\ contains servoshell changes!"))) {
-            displayedHints.push("shell");
+            result += "[shell] ";
         }
         if (commit.hints.some(hint => hint.includes("/!\\ contains WebIDL changes!"))) {
-            displayedHints.push("web");
+            result += "[web] ";
         }
         if (commit.hints.includes("/!\\ may contain changes to EXPERIMENTAL_PREFS")) {
-            displayedHints.push("exp");
+            result += "[exp] ";
         }
         if (commit.hints.includes("/!\\ may contain changes to feature flags")) {
-            displayedHints.push("flag");
+            result += "[flag] ";
         }
-        pre.append(a);
-        if (displayedHints.length > 0) {
-            pre.append(` [${displayedHints.join(" ")}]`);
-        }
-        pre.append(` - ${commit.title}\n`);
+        return result + commit.title;
     }
 }
 async function updateWordCloud() {

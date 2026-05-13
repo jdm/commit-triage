@@ -39,7 +39,7 @@ pub static ACTION: LazyLock<(mpsc::Sender<Action>, Mutex<mpsc::Receiver<Action>>
     });
 
 #[rocket::main]
-pub async fn server() -> Result<(), rocket::Error> {
+pub async fn server() -> Result<(), Box<rocket::Error>> {
     let config = Config {
         port: ARGS.web_server_port.unwrap(),
         shutdown: rocket::config::Shutdown {

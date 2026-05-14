@@ -51,7 +51,7 @@ pub async fn server() -> Result<(), rocket::Error> {
         ..Config::default()
     };
     let rocket = rocket::custom(&config)
-        .mount("/", routes![ws, word_cloud])
+        .mount("/", routes![ws, commits, word_cloud])
         .mount("/", FileServer::from("./static"))
         .ignite()
         .await?;
@@ -145,6 +145,14 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
     })
 }
 
+#[get("/commits")]
+async fn commits() -> Json<Vec<Commit>> {
+    info!("commits requested");
+    let (tx, rx) = oneshot::channel();
+    ACTION.0.send(Action::GetCommits(tx)).await.unwrap();
+    rx.await.unwrap().into()
+}
+
 #[get("/wordCloud")]
 async fn word_cloud() -> Json<Result<WordCloud, &'static str>> {
     info!("word cloud requested");
@@ -157,6 +165,7 @@ pub enum Action {
     Keypress(String),
     SetLabel(String),
     GoToCommit(String),
+    GetCommits(oneshot::Sender<Vec<Commit>>),
     GetWordCloud(oneshot::Sender<Result<WordCloud, &'static str>>),
 }
 

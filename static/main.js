@@ -1,10 +1,13 @@
 import { debouncedUpdateGitShow } from "./git-show.js";
 
 // used by event handler attributes in index.html
+window.updateSearch = updateSearch;
+window.renderSearchDialog = renderSearchDialog;
 window.updateWordCloud = updateWordCloud;
 
 const ws = new WebSocket("/ws");
-let commit = null;
+let commit = null, commits = null, filteredCommits = null;
+let searchFirstTime = true;
 let wordCloudFirstTime = true;
 ws.addEventListener("message", event => {
     console.log(event.data);
@@ -65,7 +68,7 @@ ws.addEventListener("message", event => {
 });
 addEventListener("keypress", event => {
     console.log(event);
-    if (editorDialog.open || gotoDialog.open || wordCloudDialog.open) {
+    if (editorDialog.open || gotoDialog.open || searchDialog.open || wordCloudDialog.open) {
         return;
     }
     switch (event.key) {
@@ -76,6 +79,17 @@ addEventListener("keypress", event => {
         // quit the `git show` pager without focusing the terminal, you would
         // quit the commit-triage tool by mistake. so we prevent that.
         break;
+    case "-":
+    case "+":
+        ws.send(JSON.stringify({"Keypress": event.key}));
+        traverseCommits(+1);
+        break;
+    case "J":
+        traverseCommits(+1);
+        break;
+    case "K":
+        traverseCommits(-1);
+        break;
     case "t":
         editorDialog.showModal();
         break;
@@ -83,6 +97,11 @@ addEventListener("keypress", event => {
         gotoDialog.showModal();
         gotoInput.value = commit.commit.hash_number.slice(1);
         gotoInput.select();
+        break;
+    case "/":
+        // suppress firefox “quick find”
+        event.preventDefault();
+        openSearchDialog();
         break;
     case "w":
         wordCloudDialog.showModal();
@@ -107,11 +126,11 @@ addEventListener("wheel", event => {
         return;
     }
     if (event.deltaY > 0) {
-        ws.send(JSON.stringify({"Keypress": "j"}));
+        traverseCommits(+1);
         return;
     }
     if (event.deltaY < 0) {
-        ws.send(JSON.stringify({"Keypress": "k"}));
+        traverseCommits(-1);
         return;
     }
 });
@@ -131,8 +150,71 @@ gotoForm.addEventListener("submit", event => {
     console.log(event);
     goToCommit(gotoInput.value);
 });
+openSearchDialog();
+
 function goToCommit(number) {
     ws.send(JSON.stringify({"GoToCommit": number}));
+}
+function traverseCommits(delta) {
+    const oldIndex = filteredCommits.map(commit => commit.hash_number).indexOf(commit.commit.hash_number);
+    const newIndex = oldIndex >= 0 ? (oldIndex + delta + filteredCommits.length) % filteredCommits.length : 0;
+    goToCommit(filteredCommits[newIndex].hash_number.slice(1));
+}
+async function updateSearch() {
+    const response = await fetch("/commits");
+    commits = await response.json();
+    console.log(commits);
+    renderSearchDialog();
+}
+function openSearchDialog() {
+    searchDialog.showModal();
+    if (searchFirstTime) {
+        searchFirstTime = false;
+        updateSearch();
+    }
+}
+function renderSearchDialog() {
+    const filterFn = searchFilter.value.length > 0
+        ? eval(`(commit, text) => ${searchFilter.value}`)
+        : (_commits, _text) => true;
+    filteredCommits = commits.filter(commit => filterFn(commit, [titleWithAbbreviatedHints(commit), ...commit.body].join("\n")));
+    // only clear the <pre> if the filtering ran without throwing.
+    const pre = searchDialog.querySelector("pre");
+    pre.innerHTML = `${filteredCommits.length}/${commits.length} commits:\n`;
+    for (const commit of filteredCommits) {
+        const a = document.createElement("a");
+        a.addEventListener("click", event => {
+            event.preventDefault();
+            goToCommit(commit.hash_number.slice(1));
+            wordCloudDialog.close();
+        });
+        a.textContent = commit.hash_number;
+        a.href = `#`;
+        pre.append(a, ` - ${titleWithAbbreviatedHints(commit)}\n`);
+    }
+
+    function titleWithAbbreviatedHints(commit) {
+        let result = "";
+        if (commit.hints.some(hint => hint.includes("/!\\ contains changes to WPT expectations!"))) {
+            result += "[wpt] ";
+        }
+        if (commit.hints.some(hint => hint.includes("/!\\ contains libservo changes!"))) {
+            result += "[lib] ";
+        }
+        if (commit.hints.some(hint => hint.includes("/!\\ contains servoshell changes!"))) {
+            result += "[shell] ";
+        }
+        if (commit.hints.some(hint => hint.includes("/!\\ contains WebIDL changes!"))) {
+            result += "[web] ";
+        }
+        if (commit.hints.includes("/!\\ may contain changes to EXPERIMENTAL_PREFS")) {
+            result += "[exp] ";
+        }
+        if (commit.hints.includes("/!\\ may contain changes to feature flags")) {
+            result += "[flag] ";
+        }
+        return result + commit.title;
+    }
 }
 async function updateWordCloud() {
     const response = await fetch("/wordCloud");

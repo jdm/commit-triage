@@ -271,6 +271,6 @@ warning: exhaustive rename detection was skipped due to too many files.
 warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
     # Automated downstream sync of changes from upstream as of 19-04-2026
     # [no-wpt-sync]"#;
-        let commits = parse_from_str(contents);
+        parse_from_str(contents);
     }
 }

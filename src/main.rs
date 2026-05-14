@@ -24,9 +24,11 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
+use crate::analysis::compute_word_cloud;
 use crate::commit::{Commit, State, parse_from_file, write_to_file};
 use crate::web::Action;
 
+mod analysis;
 mod commit;
 mod web;
 
@@ -57,6 +59,10 @@ pub struct Args {
     /// read `git show` outputs from this directory
     #[arg(long)]
     git_show_output_cache_path: Option<PathBuf>,
+
+    /// compute word clouds with this dictionary file
+    #[arg(long, default_value = "/usr/share/dict/words")]
+    dictionary_path: PathBuf,
 }
 
 #[derive(Debug)]
@@ -186,6 +192,9 @@ impl App {
                                 self.index = index;
                                 crate::web::update(commit);
                             }
+                        },
+                        Action::GetWordCloud(tx) => {
+                            tx.send(compute_word_cloud(&self.commits)).unwrap();
                         },
                     }
                 },

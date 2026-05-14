@@ -1,7 +1,11 @@
 import { debouncedUpdateGitShow } from "./git-show.js";
 
+// used by event handler attributes in index.html
+window.updateWordCloud = updateWordCloud;
+
 const ws = new WebSocket("/ws");
 let commit = null;
+let wordCloudFirstTime = true;
 ws.addEventListener("message", event => {
     console.log(event.data);
     commit = JSON.parse(event.data);
@@ -61,7 +65,7 @@ ws.addEventListener("message", event => {
 });
 addEventListener("keypress", event => {
     console.log(event);
-    if (editorDialog.open || gotoDialog.open) {
+    if (editorDialog.open || gotoDialog.open || wordCloudDialog.open) {
         return;
     }
     switch (event.key) {
@@ -79,6 +83,13 @@ addEventListener("keypress", event => {
         gotoDialog.showModal();
         gotoInput.value = commit.commit.hash_number.slice(1);
         gotoInput.select();
+        break;
+    case "w":
+        wordCloudDialog.showModal();
+        if (wordCloudFirstTime) {
+            wordCloudFirstTime = false;
+            updateWordCloud();
+        }
         break;
     default:
         ws.send(JSON.stringify({"Keypress": event.key}));
@@ -118,8 +129,36 @@ gotoDialog.addEventListener("close", event => {
 });
 gotoForm.addEventListener("submit", event => {
     console.log(event);
-    ws.send(JSON.stringify({"GoToCommit": gotoInput.value}));
+    goToCommit(gotoInput.value);
 });
+function goToCommit(number) {
+    ws.send(JSON.stringify({"GoToCommit": number}));
+}
+async function updateWordCloud() {
+    const response = await fetch("/wordCloud");
+    const json = await response.json();
+    console.log(json);
+    const pre = wordCloudDialog.querySelector("pre");
+    pre.innerHTML = "";
+    if ("Ok" in json) {
+        for (const [word, entries] of json.Ok.words) {
+            pre.append(`[${entries.length}] ${word}\n`);
+            for (const entry of entries) {
+                const a = document.createElement("a");
+                a.addEventListener("click", event => {
+                    event.preventDefault();
+                    goToCommit(entry.hash_number.slice(1));
+                    wordCloudDialog.close();
+                });
+                a.textContent = entry.hash_number;
+                a.href = `#`;
+                pre.append(a, ` - ${entry.title}\n`);
+            }
+        }
+    } else if ("Err" in json) {
+        pre.append(`>>> error: ${json.Err}`);
+    }
+}
 function linkify(parents, regex, hrefFn) {
     for (const parent of parents) {
         for (const kid of parent.childNodes) {

@@ -61,6 +61,15 @@
     #gotoDialog {
         width: max-content;
     }
+    #wordCloudDialog[open] {
+        display: flex;
+        flex-flow: column nowrap;
+        overflow: hidden;
+    }
+    #wordCloudDialog pre {
+        flex: 1 1 auto;
+        overflow: scroll;
+    }
     #input {
         width: 100%;
     }
@@ -80,4 +89,9 @@
 <dialog id="gotoDialog"><form id="gotoForm" method="dialog">
     #<input id="gotoInput" autofocus>
 </form></dialog>
+<dialog id="wordCloudDialog">
+    <button onclick="updateWordCloud()">update</button>
+    <!-- tabindex + autofocus to avoid scrolling to top on every showModal() -->
+    <pre tabindex="-1" autofocus></pre>
+</dialog>
 <script type="module" src="main.js"></script>

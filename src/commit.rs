@@ -41,6 +41,11 @@ impl Commit {
         lines.extend_from_slice(&self.body);
         lines.join("\n")
     }
+    pub fn word_cloud_text(&self) -> String {
+        let mut lines = vec![self.title.clone()];
+        lines.extend_from_slice(&self.body);
+        lines.join("\n")
+    }
 }
 
 pub fn write_to_file(

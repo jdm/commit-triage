@@ -9,6 +9,7 @@ pub enum State {
     Untriaged,
     Ignored,
     Accepted,
+    Done,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize)]
@@ -66,6 +67,7 @@ pub fn write_to_file(
             State::Untriaged => {}
             State::Ignored => write!(result, "-").unwrap(),
             State::Accepted => write!(result, "+").unwrap(),
+            State::Done => write!(result, ".").unwrap(),
         }
         writeln!(
             result,
@@ -107,6 +109,7 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
     let mut started_first_commit = false;
     let mut current_date = String::new();
     let mut has_bad_input = false;
+    let state_prefixes = ['-', '+', '.'];
     for (line_index, line) in contents.lines().enumerate() {
         let line_number = line_index + 1;
         if line.starts_with(">>>") {
@@ -129,7 +132,7 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
                 commit.label = rest.to_owned();
                 continue;
             }
-            if line.starts_with("https://") || line.starts_with(['-', '+']) {
+            if line.starts_with("https://") || line.starts_with(state_prefixes) {
                 commits.push(commit);
                 commit = Commit::default();
                 commit.index_in_file = commits.len();
@@ -142,11 +145,13 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
         started_first_commit = true;
         commit.date = current_date.clone();
         let line_rest;
-        if let Some(rest) = line.strip_prefix("-") {
-            commit.state = State::Ignored;
-            line_rest = rest;
-        } else if let Some(rest) = line.strip_prefix("+") {
-            commit.state = State::Accepted;
+        if let Some(rest) = line.strip_prefix(state_prefixes) {
+            commit.state = match &line[0..1] {
+                "-" => State::Ignored,
+                "+" => State::Accepted,
+                "." => State::Done,
+                _ => unreachable!("guaranteed by strip_prefix() argument"),
+            };
             line_rest = rest;
         } else {
             line_rest = line;

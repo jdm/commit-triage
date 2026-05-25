@@ -115,7 +115,11 @@
                 <button onclick='
                     searchFilter.value = searchFilter.getAttribute("value");
                     renderSearchDialog();
-                '>reset</button>
+                '>i’m triaging</button>
+                <button onclick='
+                    searchFilter.value = `["Accepted", "Done"].includes(commit.state)`;
+                    renderSearchDialog();
+                '>i’m writing</button>
                 or add search criteria:
                 <button onclick='
                     searchFilter.value = `text.includes("") && ` + searchFilter.value;

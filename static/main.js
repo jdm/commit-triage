@@ -18,6 +18,7 @@ window.doPrevious = doPrevious;
 window.doSearch = doSearch;
 window.doNextInSearch = doNextInSearch;
 window.doPreviousInSearch = doPreviousInSearch;
+window.copyCommitReferenceToClipboard = copyCommitReferenceToClipboard;
 
 export function sendMessageToServer(message) {
     ws.send(JSON.stringify(message));
@@ -83,6 +84,20 @@ ws.addEventListener("message", event => {
     }
 
     debouncedUpdateGitShow(commitExt.git_show);
+});
+addEventListener("keydown", event => {
+    console.log(event);
+    if (editorDialog.open || gotoDialog.open || searchDialog.open || wordCloudDialog.open) {
+        return;
+    }
+    if (event.ctrlKey && event.key == "c") {
+        // only if no text is selected.
+        // if text is selected, let the browser copy as usual.
+        if (getSelection().isCollapsed) {
+            event.preventDefault();
+            copyCommitReferenceToClipboard();
+        }
+    }
 });
 addEventListener("keypress", event => {
     console.log(event);
@@ -221,4 +236,9 @@ function linkify(parents, regex, hrefFn) {
             }
         }
     }
+}
+function copyCommitReferenceToClipboard() {
+    const text = `(${commitExt.commit.authors.join(", ")}, ${commitExt.commit.hash_number})`;
+    navigator.clipboard.writeText(text);
+    alert(`copied to clipboard: ${text}`);
 }

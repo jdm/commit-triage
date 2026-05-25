@@ -4,13 +4,14 @@ import { dialogs } from "./dialog-registry.js";
 import { openEditorDialog } from "./editor-dialog.js";
 import { openWordCloudDialog } from "./word-cloud-dialog.js";
 import { openGotoDialog } from "./goto-dialog.js";
-import { openSearchDialog, traverseSearchResults } from "./search-dialog.js";
+import { commits, openSearchDialog, traverseSearchResults } from "./search-dialog.js";
 
 // used by event handler attributes in index.html
 window.doAccept = doAccept;
 window.doIgnore = doIgnore;
 window.doDone = doDone;
 window.doLabel = doLabel;
+window.doSelect = doSelect;
 window.doWordCloud = doWordCloud;
 window.doGoToCommit = doGoToCommit;
 window.doNext = doNext;
@@ -18,7 +19,9 @@ window.doPrevious = doPrevious;
 window.doSearch = doSearch;
 window.doNextInSearch = doNextInSearch;
 window.doPreviousInSearch = doPreviousInSearch;
-window.copyCommitReferenceToClipboard = copyCommitReferenceToClipboard;
+window.copyCommitReferencesToClipboard = copyCommitReferencesToClipboard;
+window.clearSelection = clearSelection;
+window.markCommitsDone = markCommitsDone;
 
 export function sendMessageToServer(message) {
     ws.send(JSON.stringify(message));
@@ -28,9 +31,12 @@ export function goToCommit(number) {
 }
 
 const ws = new WebSocket("/ws");
+const selectedCommits = new Set;
 ws.addEventListener("message", event => {
     console.log(event.data);
     setCommitExt(JSON.parse(event.data));
+    updateSelectCommit();
+    updateThingsThatDependOnSelectedCommits();
     title.className = commitExt.commit.state;
     title.textContent = commitExt.commit.title;
     meta.textContent = `${commitExt.commit.date} – ${commitExt.commit.authors.join(", ")}`;
@@ -95,7 +101,7 @@ addEventListener("keydown", event => {
         // if text is selected, let the browser copy as usual.
         if (getSelection().isCollapsed) {
             event.preventDefault();
-            copyCommitReferenceToClipboard();
+            copyCommitReferencesToClipboard();
         }
     }
 });
@@ -123,6 +129,16 @@ addEventListener("keypress", event => {
         break;
     case "t":
         doLabel();
+        break;
+    case " ":
+        // if the #selectCommit checkbox is already focused,
+        // let the browser toggle the checkbox as usual.
+        // otherwise let’s toggle that checkbox here.
+        if (event.target != selectCommit) {
+            // suppress scroll when you press Space
+            event.preventDefault();
+            doSelect();
+        }
         break;
     case "w":
         doWordCloud();
@@ -188,6 +204,10 @@ function doDone() {
 function doLabel() {
     openEditorDialog();
 }
+function doSelect() {
+    selectCommit.checked = !selectCommit.checked;
+    selectCommitChanged();
+}
 function doWordCloud() {
     openWordCloudDialog();
 }
@@ -208,6 +228,9 @@ function doNextInSearch() {
 }
 function doPreviousInSearch() {
     traverseSearchResults(-1);
+}
+function getCommit(number) {
+    return commits.find(commit => commit.hash_number == number);
 }
 function linkify(parents, regex, hrefFn) {
     for (const parent of parents) {
@@ -237,8 +260,48 @@ function linkify(parents, regex, hrefFn) {
         }
     }
 }
-function copyCommitReferenceToClipboard() {
-    const text = `(${commitExt.commit.authors.join(", ")}, ${commitExt.commit.hash_number})`;
+function copyCommitReferencesToClipboard() {
+    let text;
+    if (selectedCommits.size > 0) {
+        const commits = getSelectedCommits();
+        const authors = new Set(commits.map(commit => commit.authors).flat());
+        const numbers = commits.map(commit => commit.hash_number);
+        text = `(${[...authors].join(", ")}, ${numbers.join(", ")})`;
+    } else {
+        text = `(${commitExt.commit.authors.join(", ")}, ${commitExt.commit.hash_number})`;
+    }
     navigator.clipboard.writeText(text);
     alert(`copied to clipboard: ${text}`);
+}
+
+selectCommit.addEventListener("change", event => {
+    console.log(event);
+    selectCommitChanged();
+});
+function selectCommitChanged() {
+    if (selectCommit.checked) {
+        selectedCommits.add(commitExt.commit.hash_number);
+    } else {
+        selectedCommits.delete(commitExt.commit.hash_number);
+    }
+    updateThingsThatDependOnSelectedCommits();
+}
+function updateSelectCommit() {
+    selectCommit.checked = selectedCommits.has(commitExt.commit.hash_number);
+}
+function updateThingsThatDependOnSelectedCommits() {
+    copyReferenceButton.disabled = (selectedCommits.size > 0);
+    ifAnySelectedCommits.hidden = (selectedCommits.size == 0);
+    selectedCommitCount.textContent = `(${selectedCommits.size})`;
+}
+function clearSelection() {
+    selectedCommits.clear();
+    updateSelectCommit();
+    updateThingsThatDependOnSelectedCommits();
+}
+function markCommitsDone() {
+    ws.send(JSON.stringify({"SetStateOfCommits": [getSelectedCommits(), "Done"]}));
+}
+function getSelectedCommits() {
+    return [...selectedCommits].map(number => getCommit(number));
 }

@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::Write;
+use std::fmt::Write as _;
 use std::path::Path;
 
 use serde::Serialize;
@@ -56,20 +55,20 @@ pub fn write_to_file(
     let mut commits = commits.to_owned();
     commits.sort_by_key(|commit| commit.index_in_file);
 
-    let mut file = File::create(path).map_err(|_| ())?;
+    let mut result = String::new();
     let mut last_date = None;
     for (commit, other_commit) in commits.iter().zip(other_commits.unwrap_or(&commits)) {
         if last_date != Some(&commit.date) {
-            writeln!(file, ">>> {}", commit.date).unwrap();
+            writeln!(result, ">>> {}", commit.date).unwrap();
             last_date = Some(&commit.date);
         }
         match commit.state {
             State::Untriaged => {}
-            State::Ignored => write!(file, "-").unwrap(),
-            State::Accepted => write!(file, "+").unwrap(),
+            State::Ignored => write!(result, "-").unwrap(),
+            State::Accepted => write!(result, "+").unwrap(),
         }
         writeln!(
-            file,
+            result,
             "{}\t({}, {})\t{}",
             other_commit.url,
             other_commit.authors.join(", "),
@@ -78,15 +77,21 @@ pub fn write_to_file(
         )
         .unwrap();
         if !commit.label.is_empty() {
-            writeln!(file, "    {}", commit.label).unwrap();
+            writeln!(result, "    {}", commit.label).unwrap();
         }
         for line in other_commit.hints.iter() {
-            writeln!(file, "    ^ {line}").unwrap();
+            writeln!(result, "    ^ {line}").unwrap();
         }
         for line in other_commit.body.iter() {
-            writeln!(file, "    # {line}").unwrap();
+            writeln!(result, "    # {line}").unwrap();
         }
     }
+
+    // write out `commits.txt` in as few write calls as possible.
+    // if we write it line by line, and the file is in the servo.org checkout, any local eleventy
+    // server will crash as follows, even if we add `commits.txt` to `.eleventyignore`:
+    // FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
+    std::fs::write(path, &result).map_err(|_| ())?;
 
     Ok(())
 }

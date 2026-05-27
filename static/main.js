@@ -20,6 +20,7 @@ window.doSearch = doSearch;
 window.doNextInSearch = doNextInSearch;
 window.doPreviousInSearch = doPreviousInSearch;
 window.copyCommitReferencesToClipboard = copyCommitReferencesToClipboard;
+window.copyCommitSummaryToClipboard = copyCommitSummaryToClipboard;
 window.clearSelection = clearSelection;
 window.markCommitsDone = markCommitsDone;
 
@@ -270,8 +271,22 @@ function copyCommitReferencesToClipboard() {
     } else {
         text = `(${commitExt.commit.authors.join(", ")}, ${commitExt.commit.hash_number})`;
     }
+    copyTextToClipboard(text);
+}
+function copyCommitSummaryToClipboard() {
+    let text = "";
+    const commits = selectedCommits.size > 0
+        ? getSelectedCommits()
+        : [commitExt.commit];
+    for (const commit of commits) {
+        text += `(${commit.authors.join(", ")}, ${commit.hash_number})  ${commit.title}\n`;
+        text += `${commit.label}\n\n`;
+    }
+    copyTextToClipboard(text);
+}
+function copyTextToClipboard(text) {
     navigator.clipboard.writeText(text);
-    alert(`copied to clipboard: ${text}`);
+    alert(`copied to clipboard:\n${text}`);
 }
 
 selectCommit.addEventListener("change", event => {

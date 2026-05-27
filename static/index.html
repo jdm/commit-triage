@@ -136,6 +136,13 @@
         <button onclick="doSelect()" id="selectButton"><kbd>Space</kbd> select</button>
         <a href="#" onclick="return false"></a>
         <button onclick="copyCommitReferencesToClipboard()" id="copyReferenceButton"><kbd>Ctrl</kbd>+<kbd>C</kbd> copy reference</button>
+        <br>
+        <form id="softHyphens">
+            soft hyphens:
+            <label><input type="radio" name="value" value="off" checked> off</label>
+            <label><input type="radio" name="value" value="on"> on</label>
+            <label><input type="radio" name="value" value="debug"> debug</label>
+        </form>
     </div>
     <div id="titleArea">
         <div id="ifAnySelectedCommits">

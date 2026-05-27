@@ -90,6 +90,11 @@ ws.addEventListener("message", event => {
         a.target = "anotherWindow";
     }
 
+    // inject soft hyphens into text that looks like camelCase, UpperCamelCase,
+    // or snake_case. but to avoid false positives, only consider direct
+    // descendant text nodes of <p> and <code>, plus the commit title line.
+    softHyphenify([title, label, ...content.querySelectorAll("p, code")]);
+
     debouncedUpdateGitShow(commitExt.git_show);
 });
 addEventListener("keydown", event => {
@@ -245,6 +250,22 @@ function doPreviousInSearch() {
 function getCommit(number) {
     return commits.find(commit => commit.hash_number == number);
 }
+function softHyphenify(parents) {
+    if (softHyphens.elements.value.value == "off") {
+        return;
+    }
+    for (const parent of parents) {
+        for (const kid of parent.childNodes) {
+            if (kid.nodeName != "#text")
+                continue;
+            const replacement = softHyphens.elements.value.value == "debug"
+                ? "$1-$2"
+                : "$1\u00AD$2";
+            // FIXME: injects extra hyphen in cases like `innerHTML` → `inner-HTM-L`
+            kid.nodeValue = kid.nodeValue.replace(/([a-z]|[A-Z]+)([A-Z]|_)/g, replacement);
+        }
+    }
+}
 function linkify(parents, regex, hrefFn) {
     for (const parent of parents) {
         for (const kid of parent.childNodes) {
@@ -328,3 +349,8 @@ function getSelectedCommits() {
         return [commitExt.commit];
     }
 }
+
+softHyphens.addEventListener("change", event => {
+    console.log(event);
+    sendMessageToServer({"Reload": null});
+}, true);

@@ -106,6 +106,18 @@ addEventListener("keydown", event => {
         }
     }
 });
+addEventListener("blur", event => {
+    console.log(event);
+    selectButton.disabled = false;
+}, true);
+addEventListener("focus", event => {
+    console.log(event);
+    if (["INPUT", "BUTTON"].includes(event.target.nodeName)) {
+        if (event.target != selectButton) {
+            selectButton.disabled = true;
+        }
+    }
+}, true);
 addEventListener("keypress", event => {
     console.log(event);
     if (dialogs.some(dialog => dialog.open)) {
@@ -132,10 +144,10 @@ addEventListener("keypress", event => {
         doLabel();
         break;
     case " ":
-        // if the #selectCommit checkbox is already focused,
-        // let the browser toggle the checkbox as usual.
+        // if a checkbox or button is already focused,
+        // let the browser toggle the checkbox or click the button as usual.
         // otherwise let’s toggle that checkbox here.
-        if (event.target != selectCommit) {
+        if (!["INPUT", "BUTTON"].includes(event.target.nodeName)) {
             // suppress scroll when you press Space
             event.preventDefault();
             doSelect();

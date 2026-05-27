@@ -1,6 +1,17 @@
 import { debouncedUpdateGitShow } from "./git-show.js";
 
 // used by event handler attributes in index.html
+window.doAccept = doAccept;
+window.doIgnore = doIgnore;
+window.doDone = doDone;
+window.doLabel = doLabel;
+window.doWordCloud = doWordCloud;
+window.doGoToCommit = doGoToCommit;
+window.doNext = doNext;
+window.doPrevious = doPrevious;
+window.doSearch = doSearch;
+window.doNextInSearch = doNextInSearch;
+window.doPreviousInSearch = doPreviousInSearch;
 window.updateSearch = updateSearch;
 window.renderSearchDialog = renderSearchDialog;
 window.updateWordCloud = updateWordCloud;
@@ -79,37 +90,40 @@ addEventListener("keypress", event => {
         // quit the `git show` pager without focusing the terminal, you would
         // quit the commit-triage tool by mistake. so we prevent that.
         break;
-    case "-":
     case "+":
+        doAccept();
+        break;
+    case "-":
+        doIgnore();
+        break;
     case ".":
-        ws.send(JSON.stringify({"Keypress": event.key}));
-        traverseCommits(+1);
-        break;
-    case "J":
-        traverseCommits(+1);
-        break;
-    case "K":
-        traverseCommits(-1);
+        doDone();
         break;
     case "t":
-        editorDialog.showModal();
+        doLabel();
+        break;
+    case "w":
+        doWordCloud();
         break;
     case "g":
-        gotoDialog.showModal();
-        gotoInput.value = commit.commit.hash_number.slice(1);
-        gotoInput.select();
+        doGoToCommit();
+        break;
+    case "j":
+        doNext();
+        break;
+    case "k":
+        doPrevious();
         break;
     case "/":
         // suppress firefox “quick find”
         event.preventDefault();
-        openSearchDialog();
+        doSearch();
         break;
-    case "w":
-        wordCloudDialog.showModal();
-        if (wordCloudFirstTime) {
-            wordCloudFirstTime = false;
-            updateWordCloud();
-        }
+    case "J":
+        doNextInSearch();
+        break;
+    case "K":
+        doPreviousInSearch();
         break;
     default:
         ws.send(JSON.stringify({"Keypress": event.key}));
@@ -153,6 +167,48 @@ gotoForm.addEventListener("submit", event => {
 });
 openSearchDialog();
 
+function doAccept() {
+    ws.send(JSON.stringify({"Keypress": "+"}));
+    traverseCommits(+1);
+}
+function doIgnore() {
+    ws.send(JSON.stringify({"Keypress": "-"}));
+    traverseCommits(+1);
+}
+function doDone() {
+    ws.send(JSON.stringify({"Keypress": "."}));
+    traverseCommits(+1);
+}
+function doLabel() {
+    editorDialog.showModal();
+}
+function doWordCloud() {
+    wordCloudDialog.showModal();
+    if (wordCloudFirstTime) {
+        wordCloudFirstTime = false;
+        updateWordCloud();
+    }
+}
+function doGoToCommit() {
+    gotoDialog.showModal();
+    gotoInput.value = commit.commit.hash_number.slice(1);
+    gotoInput.select();
+}
+function doNext() {
+    ws.send(JSON.stringify({"Keypress": "j"}));
+}
+function doPrevious() {
+    ws.send(JSON.stringify({"Keypress": "k"}));
+}
+function doSearch() {
+    openSearchDialog();
+}
+function doNextInSearch() {
+    traverseCommits(+1);
+}
+function doPreviousInSearch() {
+    traverseCommits(-1);
+}
 function goToCommit(number) {
     ws.send(JSON.stringify({"GoToCommit": number}));
 }

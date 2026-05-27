@@ -34,6 +34,19 @@
         /* avoid wide <img width> causing flex wrap */
         width: 40rem;
     }
+    kbd {
+        background: #00000040;
+        margin: 0 0.125rem;
+        padding: 0.125rem;
+        border-radius: 0.25rem;
+    }
+    #toolbar {
+        font-size: 1rem;
+        margin: 0.5em 0;
+    }
+    #toolbar button {
+        margin: 0.125rem 0;
+    }
     #title {
         font-weight: normal;
     }
@@ -90,6 +103,21 @@
     }
 </style>
 <main>
+    <div id="toolbar">
+        <button onclick="doAccept()"><kbd>+</kbd> accept</button>
+        <button onclick="doIgnore()"><kbd>−</kbd> ignore</button>
+        <button onclick="doDone()"><kbd><b>.</b></kbd> done</button>
+        <button onclick="doLabel()"><kbd>T</kbd> label</button>
+        <br>
+        <button onclick="doWordCloud()"><kbd>W</kbd> word cloud</button>
+        <button onclick="doGoToCommit()"><kbd>G</kbd> go to commit</button>
+        <button onclick="doNext()"><kbd>J</kbd> next</button>
+        <button onclick="doPrevious()"><kbd>K</kbd> previous</button>
+        <br>
+        <button onclick="doSearch()"><kbd>/</kbd> search</button>
+        <button onclick="doNextInSearch()"><kbd>Shift</kbd>+<kbd>J</kbd> next in search</button>
+        <button onclick="doPreviousInSearch()"><kbd>Shift</kbd>+<kbd>K</kbd> previous in search</button>
+    </div>
     <h1 id="title"></h1>
     <div id="meta"></div>
     <div id="label"></div>

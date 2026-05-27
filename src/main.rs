@@ -246,6 +246,7 @@ impl App {
                 KeyCode::Char('o') => self.open_url(),
                 KeyCode::Char('+') => self.update_state(State::Accepted, for_web),
                 KeyCode::Char('-') => self.update_state(State::Ignored, for_web),
+                KeyCode::Char('.') => self.update_state(State::Done, for_web),
                 KeyCode::Char(' ') => self.unroll = !self.unroll,
                 KeyCode::Char('t') => self.open_tag_editor(),
                 _ => {}
@@ -471,6 +472,7 @@ impl Widget for &App {
             State::Ignored => title.dark_gray(),
             State::Accepted => title.green(),
             State::Untriaged => title.yellow(),
+            State::Done => title.reset(),
         };
         let mut lines = vec![
             title,

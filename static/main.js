@@ -81,6 +81,7 @@ addEventListener("keypress", event => {
         break;
     case "-":
     case "+":
+    case ".":
         ws.send(JSON.stringify({"Keypress": event.key}));
         traverseCommits(+1);
         break;

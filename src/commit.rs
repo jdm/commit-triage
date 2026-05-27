@@ -34,6 +34,13 @@ impl Commit {
         &self.label
     }
 
+    pub fn notes(&self) -> Option<&str> {
+        if let Some((_tags, notes)) = self.label.split_once(";") {
+            return Some(notes);
+        }
+        None
+    }
+
     pub fn filter_text(&self) -> String {
         let mut lines = vec![self.title.clone(), self.authors.join(", ")];
         lines.extend_from_slice(&self.hints);

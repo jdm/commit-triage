@@ -262,23 +262,15 @@ function linkify(parents, regex, hrefFn) {
     }
 }
 function copyCommitReferencesToClipboard() {
-    let text;
-    if (selectedCommits.size > 0) {
-        const commits = getSelectedCommits();
-        const authors = new Set(commits.map(commit => commit.authors).flat());
-        const numbers = commits.map(commit => commit.hash_number);
-        text = `(${[...authors].join(", ")}, ${numbers.join(", ")})`;
-    } else {
-        text = `(${commitExt.commit.authors.join(", ")}, ${commitExt.commit.hash_number})`;
-    }
+    const commits = getSelectedCommits();
+    const authors = new Set(commits.map(commit => commit.authors).flat());
+    const numbers = commits.map(commit => commit.hash_number);
+    const text = `(${[...authors].join(", ")}, ${numbers.join(", ")})`;
     copyTextToClipboard(text);
 }
 function copyCommitSummaryToClipboard() {
     let text = "";
-    const commits = selectedCommits.size > 0
-        ? getSelectedCommits()
-        : [commitExt.commit];
-    for (const commit of commits) {
+    for (const commit of getSelectedCommits()) {
         text += `(${commit.authors.join(", ")}, ${commit.hash_number})  ${commit.title}\n`;
         text += `${commit.label}\n\n`;
     }
@@ -318,5 +310,9 @@ function markCommitsDone() {
     ws.send(JSON.stringify({"SetStateOfCommits": [getSelectedCommits(), "Done"]}));
 }
 function getSelectedCommits() {
-    return [...selectedCommits].map(number => getCommit(number));
+    if (selectedCommits.size > 0) {
+        return [...selectedCommits].map(number => getCommit(number));
+    } else {
+        return [commitExt.commit];
+    }
 }

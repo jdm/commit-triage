@@ -19,6 +19,7 @@ window.doPrevious = doPrevious;
 window.doSearch = doSearch;
 window.doNextInSearch = doNextInSearch;
 window.doPreviousInSearch = doPreviousInSearch;
+window.doSearchApiDocs = doSearchApiDocs;
 window.copyCommitReferencesToClipboard = copyCommitReferencesToClipboard;
 window.copyCommitSummaryToClipboard = copyCommitSummaryToClipboard;
 window.clearSelection = clearSelection;
@@ -247,6 +248,13 @@ function doNextInSearch() {
 function doPreviousInSearch() {
     traverseSearchResults(-1);
 }
+function doSearchApiDocs() {
+    // strip out any soft hyphens from the query, because they break the search.
+    const query = `${getSelection()}`.replace(/\u00AD/g, "");
+    // like `_blank`, but opens in the same tab every time, so you can keep
+    // this tool and the API docs in two separate windows.
+    open(`https://doc.servo.org/servo/?search=${query}`, "anotherWindow");
+}
 function getCommit(number) {
     return commits.find(commit => commit.hash_number == number);
 }
@@ -356,3 +364,20 @@ softHyphens.addEventListener("change", event => {
     console.log(event);
     sendMessageToServer({"Reload": null});
 }, true);
+document.addEventListener("selectionchange", event => {
+    console.log(event);
+    const selection = getSelection();
+    if (selection.isCollapsed) {
+        searchApiDocs.hidden = true;
+    } else {
+        searchApiDocs.hidden = false;
+        const range = selection.getRangeAt(0);
+        const rects = [...range.getClientRects()];
+        const rect = rects.at(-1);
+        const minX = searchApiDocsButton.offsetWidth;
+        const x = Math.max(rect.right, minX);
+        const y = rect.bottom;
+        searchApiDocs.style.left = `${x}px`;
+        searchApiDocs.style.top = `${y}px`;
+    }
+});

@@ -48,6 +48,15 @@
     #ifAnySelectedCommits button {
         margin: 0.125rem 0;
     }
+    #searchApiDocs {
+        position: fixed;
+        width: 0;
+    }
+    #searchApiDocsButton {
+        width: max-content;
+        position: absolute;
+        right: 0;
+    }
     #titleArea {
         font-size: 2rem;
         margin: 0.5em 0;
@@ -148,6 +157,9 @@
             <label><input type="radio" name="value" value="off" checked> off</label>
             <label><input type="radio" name="value" value="on"> on</label>
         </form>
+        <div id="searchApiDocs" hidden>
+            <button id="searchApiDocsButton" onclick="doSearchApiDocs()">search API docs</button>
+        </div>
     </div>
     <div id="titleArea">
         <div id="ifAnySelectedCommits">

@@ -1,29 +1,47 @@
 import { debouncedUpdateGitShow } from "./git-show.js";
+import { commitExt, setCommitExt } from "./commit-registry.js";
+import { dialogs } from "./dialog-registry.js";
+import { openEditorDialog } from "./editor-dialog.js";
+import { openWordCloudDialog } from "./word-cloud-dialog.js";
+import { openGotoDialog } from "./goto-dialog.js";
+import { openSearchDialog, traverseSearchResults } from "./search-dialog.js";
 
 // used by event handler attributes in index.html
-window.updateSearch = updateSearch;
-window.renderSearchDialog = renderSearchDialog;
-window.updateWordCloud = updateWordCloud;
+window.doAccept = doAccept;
+window.doIgnore = doIgnore;
+window.doDone = doDone;
+window.doLabel = doLabel;
+window.doWordCloud = doWordCloud;
+window.doGoToCommit = doGoToCommit;
+window.doNext = doNext;
+window.doPrevious = doPrevious;
+window.doSearch = doSearch;
+window.doNextInSearch = doNextInSearch;
+window.doPreviousInSearch = doPreviousInSearch;
+
+export function sendMessageToServer(message) {
+    ws.send(JSON.stringify(message));
+}
+export function goToCommit(number) {
+    sendMessageToServer({"GoToCommit": number});
+}
 
 const ws = new WebSocket("/ws");
-let commit = null, commits = null, filteredCommits = null;
-let searchFirstTime = true;
-let wordCloudFirstTime = true;
 ws.addEventListener("message", event => {
     console.log(event.data);
-    commit = JSON.parse(event.data);
-    title.className = commit.commit.state;
-    title.textContent = commit.commit.title;
-    meta.textContent = `${commit.commit.date} – ${commit.commit.authors.join(", ")}`;
-    label.textContent = commit.commit.label;
+    setCommitExt(JSON.parse(event.data));
+    title.className = commitExt.commit.state;
+    title.textContent = commitExt.commit.title;
+    meta.textContent = `${commitExt.commit.date} – ${commitExt.commit.authors.join(", ")}`;
+    label.textContent = commitExt.commit.label;
     hints.innerHTML = "";
-    for (const hint of commit.commit.hints) {
+    for (const hint of commitExt.commit.hints) {
         const li = document.createElement("li");
         li.append(hint);
         hints.append(li);
     }
-    content.innerHTML = commit.rendered_body;
-    input.value = commit.commit.label;
+    content.innerHTML = commitExt.rendered_body;
+    input.value = commitExt.commit.label;
 
     // linkify any text that looks like a qualified issue reference. to avoid
     // false positives, only consider direct descendant text nodes of <p>.
@@ -64,11 +82,11 @@ ws.addEventListener("message", event => {
         a.target = "anotherWindow";
     }
 
-    debouncedUpdateGitShow(commit.git_show);
+    debouncedUpdateGitShow(commitExt.git_show);
 });
 addEventListener("keypress", event => {
     console.log(event);
-    if (editorDialog.open || gotoDialog.open || searchDialog.open || wordCloudDialog.open) {
+    if (dialogs.some(dialog => dialog.open)) {
         return;
     }
     switch (event.key) {
@@ -79,40 +97,43 @@ addEventListener("keypress", event => {
         // quit the `git show` pager without focusing the terminal, you would
         // quit the commit-triage tool by mistake. so we prevent that.
         break;
-    case "-":
     case "+":
+        doAccept();
+        break;
+    case "-":
+        doIgnore();
+        break;
     case ".":
-        ws.send(JSON.stringify({"Keypress": event.key}));
-        traverseCommits(+1);
-        break;
-    case "J":
-        traverseCommits(+1);
-        break;
-    case "K":
-        traverseCommits(-1);
+        doDone();
         break;
     case "t":
-        editorDialog.showModal();
+        doLabel();
+        break;
+    case "w":
+        doWordCloud();
         break;
     case "g":
-        gotoDialog.showModal();
-        gotoInput.value = commit.commit.hash_number.slice(1);
-        gotoInput.select();
+        doGoToCommit();
+        break;
+    case "j":
+        doNext();
+        break;
+    case "k":
+        doPrevious();
         break;
     case "/":
         // suppress firefox “quick find”
         event.preventDefault();
-        openSearchDialog();
+        doSearch();
         break;
-    case "w":
-        wordCloudDialog.showModal();
-        if (wordCloudFirstTime) {
-            wordCloudFirstTime = false;
-            updateWordCloud();
-        }
+    case "J":
+        doNextInSearch();
+        break;
+    case "K":
+        doPreviousInSearch();
         break;
     default:
-        ws.send(JSON.stringify({"Keypress": event.key}));
+        sendMessageToServer({"Keypress": event.key});
     }
 });
 // when you Shift+scroll, step through commits.
@@ -127,120 +148,51 @@ addEventListener("wheel", event => {
         return;
     }
     if (event.deltaY > 0) {
-        traverseCommits(+1);
+        doNextInSearch();
         return;
     }
     if (event.deltaY < 0) {
-        traverseCommits(-1);
+        doPreviousInSearch();
         return;
     }
 });
-editorDialog.addEventListener("close", event => {
-    console.log(event);
-    ws.send(JSON.stringify({"Reload": null}));
-});
-editorForm.addEventListener("submit", event => {
-    console.log(event);
-    ws.send(JSON.stringify({"SetLabel": input.value}));
-});
-gotoDialog.addEventListener("close", event => {
-    console.log(event);
-    ws.send(JSON.stringify({"Reload": null}));
-});
-gotoForm.addEventListener("submit", event => {
-    console.log(event);
-    goToCommit(gotoInput.value);
-});
 openSearchDialog();
 
-function goToCommit(number) {
-    ws.send(JSON.stringify({"GoToCommit": number}));
+function doAccept() {
+    sendMessageToServer({"Keypress": "+"});
+    doNextInSearch();
 }
-function traverseCommits(delta) {
-    const oldIndex = filteredCommits.map(commit => commit.hash_number).indexOf(commit.commit.hash_number);
-    const newIndex = oldIndex >= 0 ? (oldIndex + delta + filteredCommits.length) % filteredCommits.length : 0;
-    goToCommit(filteredCommits[newIndex].hash_number.slice(1));
+function doIgnore() {
+    sendMessageToServer({"Keypress": "-"});
+    doNextInSearch();
 }
-async function updateSearch() {
-    const response = await fetch("/commits");
-    commits = await response.json();
-    console.log(commits);
-    renderSearchDialog();
+function doDone() {
+    sendMessageToServer({"Keypress": "."});
+    doNextInSearch();
 }
-function openSearchDialog() {
-    searchDialog.showModal();
-    if (searchFirstTime) {
-        searchFirstTime = false;
-        updateSearch();
-    }
+function doLabel() {
+    openEditorDialog();
 }
-function renderSearchDialog() {
-    const filterFn = searchFilter.value.length > 0
-        ? eval(`(commit, text) => ${searchFilter.value}`)
-        : (_commits, _text) => true;
-    filteredCommits = commits.filter(commit => filterFn(commit, [titleWithAbbreviatedHints(commit), ...commit.body].join("\n")));
-    // only clear the <pre> if the filtering ran without throwing.
-    const pre = searchDialog.querySelector("pre");
-    pre.innerHTML = `${filteredCommits.length}/${commits.length} commits:\n`;
-    for (const commit of filteredCommits) {
-        const a = document.createElement("a");
-        a.addEventListener("click", event => {
-            event.preventDefault();
-            goToCommit(commit.hash_number.slice(1));
-            wordCloudDialog.close();
-        });
-        a.textContent = commit.hash_number;
-        a.href = `#`;
-        pre.append(a, ` - ${titleWithAbbreviatedHints(commit)}\n`);
-    }
-
-    function titleWithAbbreviatedHints(commit) {
-        let result = "";
-        if (commit.hints.some(hint => hint.includes("/!\\ contains changes to WPT expectations!"))) {
-            result += "[wpt] ";
-        }
-        if (commit.hints.some(hint => hint.includes("/!\\ contains libservo changes!"))) {
-            result += "[lib] ";
-        }
-        if (commit.hints.some(hint => hint.includes("/!\\ contains servoshell changes!"))) {
-            result += "[shell] ";
-        }
-        if (commit.hints.some(hint => hint.includes("/!\\ contains WebIDL changes!"))) {
-            result += "[web] ";
-        }
-        if (commit.hints.includes("/!\\ may contain changes to EXPERIMENTAL_PREFS")) {
-            result += "[exp] ";
-        }
-        if (commit.hints.includes("/!\\ may contain changes to feature flags")) {
-            result += "[flag] ";
-        }
-        return result + commit.title;
-    }
+function doWordCloud() {
+    openWordCloudDialog();
 }
-async function updateWordCloud() {
-    const response = await fetch("/wordCloud");
-    const json = await response.json();
-    console.log(json);
-    const pre = wordCloudDialog.querySelector("pre");
-    pre.innerHTML = "";
-    if ("Ok" in json) {
-        for (const [word, entries] of json.Ok.words) {
-            pre.append(`[${entries.length}] ${word}\n`);
-            for (const entry of entries) {
-                const a = document.createElement("a");
-                a.addEventListener("click", event => {
-                    event.preventDefault();
-                    goToCommit(entry.hash_number.slice(1));
-                    wordCloudDialog.close();
-                });
-                a.textContent = entry.hash_number;
-                a.href = `#`;
-                pre.append(a, ` - ${entry.title}\n`);
-            }
-        }
-    } else if ("Err" in json) {
-        pre.append(`>>> error: ${json.Err}`);
-    }
+function doGoToCommit() {
+    openGotoDialog();
+}
+function doNext() {
+    sendMessageToServer({"Keypress": "j"});
+}
+function doPrevious() {
+    sendMessageToServer({"Keypress": "k"});
+}
+function doSearch() {
+    openSearchDialog();
+}
+function doNextInSearch() {
+    traverseSearchResults(+1);
+}
+function doPreviousInSearch() {
+    traverseSearchResults(-1);
 }
 function linkify(parents, regex, hrefFn) {
     for (const parent of parents) {

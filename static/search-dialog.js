@@ -1,0 +1,74 @@
+import { goToCommit } from "./main.js";
+import { commitExt } from "./commit-registry.js";
+import { dialogs } from "./dialog-registry.js";
+dialogs.push(searchDialog);
+
+// used by event handler attributes in index.html
+window.updateSearch = updateSearch;
+window.renderSearchDialog = renderSearchDialog;
+
+export let commits = null;
+export let filteredCommits = null;
+let searchFirstTime = true;
+
+export function openSearchDialog() {
+    searchDialog.showModal();
+    if (searchFirstTime) {
+        searchFirstTime = false;
+        updateSearch();
+    }
+}
+export function traverseSearchResults(delta) {
+    const oldIndex = filteredCommits.map(commit => commit.hash_number).indexOf(commitExt.commit.hash_number);
+    const newIndex = oldIndex >= 0 ? (oldIndex + delta + filteredCommits.length) % filteredCommits.length : 0;
+    goToCommit(filteredCommits[newIndex].hash_number.slice(1));
+}
+async function updateSearch() {
+    const response = await fetch("/commits");
+    commits = await response.json();
+    console.log(commits);
+    renderSearchDialog();
+}
+function renderSearchDialog() {
+    const filterFn = searchFilter.value.length > 0
+        ? eval(`(commit, text) => ${searchFilter.value}`)
+        : (_commits, _text) => true;
+    filteredCommits = commits.filter(commit => filterFn(commit, [titleWithAbbreviatedHints(commit), ...commit.body].join("\n")));
+    // only clear the <pre> if the filtering ran without throwing.
+    const pre = searchDialog.querySelector("pre");
+    pre.innerHTML = `${filteredCommits.length}/${commits.length} commits:\n`;
+    for (const commit of filteredCommits) {
+        const a = document.createElement("a");
+        a.addEventListener("click", event => {
+            event.preventDefault();
+            goToCommit(commit.hash_number.slice(1));
+            searchDialog.close();
+        });
+        a.textContent = commit.hash_number;
+        a.href = `#`;
+        pre.append(a, ` - ${titleWithAbbreviatedHints(commit)}\n`);
+    }
+
+    function titleWithAbbreviatedHints(commit) {
+        let result = "";
+        if (commit.hints.some(hint => hint.includes("/!\\ contains changes to WPT expectations!"))) {
+            result += "[wpt] ";
+        }
+        if (commit.hints.some(hint => hint.includes("/!\\ contains libservo changes!"))) {
+            result += "[lib] ";
+        }
+        if (commit.hints.some(hint => hint.includes("/!\\ contains servoshell changes!"))) {
+            result += "[shell] ";
+        }
+        if (commit.hints.some(hint => hint.includes("/!\\ contains WebIDL changes!"))) {
+            result += "[web] ";
+        }
+        if (commit.hints.includes("/!\\ may contain changes to EXPERIMENTAL_PREFS")) {
+            result += "[exp] ";
+        }
+        if (commit.hints.includes("/!\\ may contain changes to feature flags")) {
+            result += "[flag] ";
+        }
+        return result + commit.title;
+    }
+}

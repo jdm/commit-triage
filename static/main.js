@@ -298,7 +298,9 @@ function copyCommitReferencesToClipboard() {
     const commits = getSelectedCommits();
     const authors = new Set(commits.map(commit => commit.authors).flat());
     const numbers = commits.map(commit => commit.hash_number);
-    const text = `(${[...authors].join(", ")}, ${numbers.join(", ")})`;
+    const text = linkifyCopies.elements.value.value == "on"
+        ? `(${[...authors].map(a => `[${a}](https://github.com/${a.slice(1)})`).join(", ")}, ${numbers.map(n => `[${n}](https://github.com/servo/servo/pull/${n.slice(1)})`).join(", ")})`
+        : `(${[...authors].join(", ")}, ${numbers.join(", ")})`;
     copyTextToClipboard(text);
 }
 function copyCommitSummaryToClipboard() {

@@ -54,7 +54,7 @@ function renderSearchDialog() {
         if (commit.hints.some(hint => hint.includes("/!\\ contains changes to WPT expectations!"))) {
             result += "[wpt] ";
         }
-        if (commit.hints.some(hint => hint.includes("/!\\ contains libservo changes!"))) {
+        if (commit.hints.some(hint => hint.includes("/!\\ contains libservo or embedder_traits changes!"))) {
             result += "[lib] ";
         }
         if (commit.hints.some(hint => hint.includes("/!\\ contains servoshell changes!"))) {

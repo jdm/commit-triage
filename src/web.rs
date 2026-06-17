@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::path::Path;
 use std::sync::{LazyLock, OnceLock, RwLock};
 
 use comrak::markdown_to_html;
@@ -14,6 +16,7 @@ use rocket::{
 };
 use rocket_ws::Message;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use tracing::{error, info};
 
 use crate::{
@@ -55,7 +58,7 @@ pub async fn server() -> Result<(), Box<rocket::Error>> {
         ..Config::default()
     };
     let rocket = rocket::custom(&config)
-        .mount("/", routes![ws, commits, word_cloud])
+        .mount("/", routes![ws, commits, word_cloud, github_issue])
         .mount("/", FileServer::from("./static"))
         .ignite()
         .await?;
@@ -69,15 +72,19 @@ pub fn shutdown() {
     crate::web::SHUTDOWN.get().unwrap().clone().notify();
 }
 
-pub fn update(commit: &Commit) {
+fn gfm_render_safe(markdown: &str) -> String {
     let mut options = comrak::Options::default();
     options.extension.autolink = true;
     options.extension.table = true;
     options.render.gfm_quirks = true;
     options.render.hardbreaks = true;
     options.render.r#unsafe = true;
-    let unsafe_body = markdown_to_html(&commit.body.join("\n"), &options);
-    let body = ammonia::clean(&unsafe_body);
+    let unsafe_body = markdown_to_html(markdown, &options);
+    ammonia::clean(&unsafe_body)
+}
+
+pub fn update(commit: &Commit) {
+    let body = gfm_render_safe(&commit.body.join("\n"));
     let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
         std::fs::read_to_string(path.join(&commit.hash)).unwrap_or_else(|_| "".to_owned())
     } else {
@@ -169,6 +176,40 @@ async fn word_cloud() -> Json<Result<WordCloud, &'static str>> {
     rx.await.unwrap().into()
 }
 
+#[get("/api.github.com/repos/<owner>/<repo>/issues/<number>")]
+fn github_issue(
+    owner: String,
+    repo: String,
+    number: usize,
+) -> Json<Result<GithubIssueResponseResponse, &'static str>> {
+    info!(?owner, ?repo, ?number, "github issue requested");
+    let original = std::fs::read_to_string(
+        Path::new("/home/shuppy/servo.org/api.github.com/repos")
+            .join(&owner)
+            .join(&repo)
+            .join("issues")
+            .join(&number.to_string())
+            .join("index.json"),
+    )
+    .map_err(|_| "failed to read github issue response from github api cache");
+    let original = match original {
+        Ok(result) => result,
+        Err(error) => return Err(error).into(),
+    };
+    let json_value = serde_json::from_str::<GithubIssueResponse>(&original)
+        .map_err(|_| "failed to parse github issue response");
+    let json_value = match json_value {
+        Ok(result) => result,
+        Err(error) => return Err(error).into(),
+    };
+    let rendered_body = gfm_render_safe(&json_value.body);
+    Ok(GithubIssueResponseResponse {
+        original,
+        rendered_body,
+    })
+    .into()
+}
+
 pub enum Action {
     Keypress(String),
     /// set the [`State`] of the each given [`Commit`].
@@ -204,4 +245,17 @@ enum Request {
     GoToCommit(String),
 
     Reload,
+}
+
+#[derive(Deserialize)]
+struct GithubIssueResponse {
+    body: String,
+    #[serde(flatten)]
+    _rest: HashMap<String, Value>,
+}
+
+#[derive(Serialize)]
+struct GithubIssueResponseResponse {
+    original: String,
+    rendered_body: String,
 }

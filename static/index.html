@@ -112,6 +112,14 @@
         color: var(--monokai-fg);
         background: var(--monokai-bg);
     }
+    #issueDialog {
+        overflow: scroll;
+        /* TODO: cover #gitShow in narrow viewports */
+        position: fixed;
+        inset: 0 1rem 0 50%;
+        width: auto;
+        height: auto;
+    }
     #editorDialog {
         width: 100%;
     }
@@ -219,6 +227,7 @@
     <div id="content"></div>
 </main>
 <pre id="gitShow"></pre>
+<dialog id="issueDialog"></dialog>
 <dialog id="editorDialog"><form id="editorForm" method="dialog">
     <input id="input" autofocus size="100">
 </form></dialog>

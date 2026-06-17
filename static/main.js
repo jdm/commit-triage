@@ -4,6 +4,7 @@ import { dialogs } from "./dialog-registry.js";
 import { openEditorDialog } from "./editor-dialog.js";
 import { openWordCloudDialog } from "./word-cloud-dialog.js";
 import { openGotoDialog } from "./goto-dialog.js";
+import { openIssueDialog } from "./issue-dialog.js";
 import { commits, filteredCommits, openSearchDialog, traverseSearchResults } from "./search-dialog.js";
 
 // used by event handler attributes in index.html
@@ -128,6 +129,17 @@ addEventListener("focus", event => {
     if (["INPUT", "BUTTON"].includes(event.target.nodeName)) {
         if (event.target != selectButton) {
             selectButton.disabled = true;
+        }
+    }
+}, true);
+addEventListener("click", event => {
+    console.log(event);
+    if (event.target.matches(":link")) {
+        const matches = event.target.href.match(/https:[/][/]github.com[/]([^/]+)[/]([^/]+)[/]issues[/]([^/]+)/);
+        if (matches != null) {
+            event.preventDefault();
+            const [, owner, repo, number] = matches;
+            openIssueDialog(owner, repo, number);
         }
     }
 }, true);

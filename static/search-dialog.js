@@ -31,9 +31,9 @@ async function updateSearch() {
 }
 function renderSearchDialog() {
     const filterFn = searchFilter.value.length > 0
-        ? eval(`(commit, text) => ${searchFilter.value}`)
-        : (_commits, _text) => true;
-    filteredCommits = commits.filter(commit => filterFn(commit, [titleWithAbbreviatedHints(commit), ...commit.body].join("\n")));
+        ? eval(`(commit, text, hints) => ${searchFilter.value}`)
+        : (_commits, _text, _hints) => true;
+    filteredCommits = commits.filter(commit => filterFn(commit, [titleWithAbbreviatedHints(commit), ...commit.body].join("\n"), abbreviatedHints(commit)));
     // only clear the <pre> if the filtering ran without throwing.
     const pre = searchDialog.querySelector("pre");
     pre.innerHTML = `${filteredCommits.length}/${commits.length} commits:\n`;
@@ -50,6 +50,9 @@ function renderSearchDialog() {
     }
 
     function titleWithAbbreviatedHints(commit) {
+        return `${abbreviatedHints(commit)}${commit.title}`;
+    }
+    function abbreviatedHints(commit) {
         let result = "";
         if (commit.hints.some(hint => hint.includes("/!\\ contains changes to WPT expectations!"))) {
             result += "[wpt] ";
@@ -69,6 +72,6 @@ function renderSearchDialog() {
         if (commit.hints.includes("/!\\ may contain changes to feature flags")) {
             result += "[flag] ";
         }
-        return result + commit.title;
+        return result;
     }
 }

@@ -20,6 +20,11 @@ window.doSearch = doSearch;
 window.doNextInSearch = doNextInSearch;
 window.doPreviousInSearch = doPreviousInSearch;
 window.doSearchApiDocs = doSearchApiDocs;
+window.doCopyStrong = doCopyStrong;
+window.doCopyStrongSingleQuoted = doCopyStrongSingleQuoted;
+window.doCopyCode = doCopyCode;
+window.doCreateLink = doCreateLink;
+window.doCreateCodeLink = doCreateCodeLink;
 window.copyCommitReferencesToClipboard = copyCommitReferencesToClipboard;
 window.copyCommitSummaryToClipboard = copyCommitSummaryToClipboard;
 window.clearSelection = clearSelection;
@@ -255,6 +260,23 @@ function doSearchApiDocs() {
     // this tool and the API docs in two separate windows.
     open(`https://doc.servo.org/servo/?search=${query}`, "anotherWindow");
 }
+function doCopyStrong() {
+    copyTextToClipboard(`**${getSelection()}**`);
+}
+function doCopyStrongSingleQuoted() {
+    copyTextToClipboard(`**‘${getSelection()}’**`);
+}
+function doCopyCode() {
+    copyTextToClipboard(`\`${getSelection()}\``);
+}
+async function doCreateLink() {
+    const url = await navigator.clipboard.readText();
+    copyTextToClipboard(`[${getSelection()}](${url})`);
+}
+async function doCreateCodeLink() {
+    const url = await navigator.clipboard.readText();
+    copyTextToClipboard(`[\`${getSelection()}\`](${url})`);
+}
 function getCommit(number) {
     return commits.find(commit => commit.hash_number == number);
 }
@@ -368,16 +390,16 @@ document.addEventListener("selectionchange", event => {
     console.log(event);
     const selection = getSelection();
     if (selection.isCollapsed) {
-        searchApiDocs.hidden = true;
+        selectionToolbox.hidden = true;
     } else {
-        searchApiDocs.hidden = false;
+        selectionToolbox.hidden = false;
         const range = selection.getRangeAt(0);
         const rects = [...range.getClientRects()];
         const rect = rects.at(-1);
-        const minX = searchApiDocsButton.offsetWidth;
+        const minX = selectionToolboxContent.offsetWidth;
         const x = Math.max(rect.right, minX);
         const y = rect.bottom;
-        searchApiDocs.style.left = `${x}px`;
-        searchApiDocs.style.top = `${y}px`;
+        selectionToolbox.style.left = `${x}px`;
+        selectionToolbox.style.top = `${y}px`;
     }
 });

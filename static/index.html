@@ -48,14 +48,26 @@
     #ifAnySelectedCommits button {
         margin: 0.125rem 0;
     }
-    #searchApiDocs {
+    #selectionToolbox {
         position: fixed;
         width: 0;
     }
-    #searchApiDocsButton {
-        width: max-content;
+    #selectionToolboxContent {
+        width: min-content;
         position: absolute;
         right: 0;
+        display: flex;
+        flex-flow: column nowrap;
+        background: white;
+    }
+    #selectionToolbox fieldset {
+        display: flex;
+        flex-flow: row wrap;
+        font: 0.75rem system-ui;
+    }
+    #selectionToolbox button {
+        margin: 0;
+        white-space: nowrap;
     }
     #titleArea {
         font-size: 2rem;
@@ -157,8 +169,18 @@
             <label><input type="radio" name="value" value="off" checked> off</label>
             <label><input type="radio" name="value" value="on"> on</label>
         </form>
-        <div id="searchApiDocs" hidden>
-            <button id="searchApiDocsButton" onclick="doSearchApiDocs()">search API docs</button>
+        <div id="selectionToolbox" hidden>
+            <div id="selectionToolboxContent">
+                <button onclick="doSearchApiDocs()">search API docs</button>
+                <fieldset>
+                    <legend>or copy:</legend>
+                    <button onclick="doCopyStrong()"><code>**</code>…<code>**</code></button>
+                    <button onclick="doCopyStrongSingleQuoted()"><code>**‘</code>…<code>’**</code></button>
+                    <button onclick="doCopyCode()"><code>`</code>…<code>`</code></button>
+                    <button onclick="doCreateLink()"><code>[</code>…<code>](</code>paste<code>)</code></button>
+                    <button onclick="doCreateCodeLink()"><code>[`</code>…<code>`](</code>paste<code>)</code></button>
+                </div>
+            </div>
         </div>
     </div>
     <div id="titleArea">

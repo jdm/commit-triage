@@ -142,6 +142,10 @@ addEventListener("keypress", event => {
         // quit the `git show` pager without focusing the terminal, you would
         // quit the commit-triage tool by mistake. so we prevent that.
         break;
+    case "Enter":
+        // don’t forward Enter to the TUI, because it will open the label editor,
+        // which will eat keys like `+`, `-`, `j`, and `k`.
+        break;
     case "+":
         doAccept();
         break;

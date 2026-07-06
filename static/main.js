@@ -192,10 +192,13 @@ addEventListener("keypress", event => {
     }
 });
 // when you Shift+scroll, step through commits.
-// unlike Ctrl+scroll, Alt+scroll, and scrolling without modifiers, this does
-// not seem to interfere with typical browser default behaviour.
+// typical browser default behaviour is to scroll horizontally, so ignore the event
+// and let that happen if a dialog is open or the pointer is over `#gitShow`.
 addEventListener("wheel", event => {
     console.log(event);
+    if (dialogs.some(dialog => dialog.open)) {
+        return;
+    }
     if (event.target.id == "gitShow") {
         return;
     }

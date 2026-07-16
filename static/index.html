@@ -7,7 +7,7 @@
         --monokai-fg: /* Editor Foreground */ #f8f8f2;
         --monokai-bg: /* Editor Background */ #272822;
         --sgr-30: /* Terminal ANSI Black */ #333333;
-        --sgr-31: /* Terminal ANSI Red */ #c4265e;
+        --sgr-31: /* Terminal ANSI Red */ color-mix(in oklab, #c4265e, 40% white);
         --sgr-32: /* Terminal ANSI Green */ #86b42b;
         --sgr-33: /* Terminal ANSI Yellow */ #b3b42b;
         --sgr-34: /* Terminal ANSI Blue */ #6a7ec8;
@@ -47,6 +47,27 @@
     #toolbar button,
     #ifAnySelectedCommits button {
         margin: 0.125rem 0;
+    }
+    #selectionToolbox {
+        position: fixed;
+        width: 0;
+    }
+    #selectionToolboxContent {
+        width: min-content;
+        position: absolute;
+        right: 0;
+        display: flex;
+        flex-flow: column nowrap;
+        background: white;
+    }
+    #selectionToolbox fieldset {
+        display: flex;
+        flex-flow: row wrap;
+        font: 0.75rem system-ui;
+    }
+    #selectionToolbox button {
+        margin: 0;
+        white-space: nowrap;
     }
     #titleArea {
         font-size: 2rem;
@@ -136,6 +157,31 @@
         <button onclick="doSelect()" id="selectButton"><kbd>Space</kbd> select</button>
         <a href="#" onclick="return false"></a>
         <button onclick="copyCommitReferencesToClipboard()" id="copyReferenceButton"><kbd>Ctrl</kbd>+<kbd>C</kbd> copy reference</button>
+        <br>
+        <form id="softHyphens">
+            soft hyphens:
+            <label><input type="radio" name="value" value="off" checked> off</label>
+            <label><input type="radio" name="value" value="on"> on</label>
+            <label><input type="radio" name="value" value="debug"> debug</label>
+        </form>
+        <form id="linkifyCopies">
+            linkify copies:
+            <label><input type="radio" name="value" value="off" checked> off</label>
+            <label><input type="radio" name="value" value="on"> on</label>
+        </form>
+        <div id="selectionToolbox" hidden>
+            <div id="selectionToolboxContent">
+                <button onclick="doSearchApiDocs()">search API docs</button>
+                <fieldset>
+                    <legend>or copy:</legend>
+                    <button onclick="doCopyStrong()"><code>**</code>…<code>**</code></button>
+                    <button onclick="doCopyStrongSingleQuoted()"><code>**‘</code>…<code>’**</code></button>
+                    <button onclick="doCopyCode()"><code>`</code>…<code>`</code></button>
+                    <button onclick="doCreateLink()"><code>[</code>…<code>](</code>paste<code>)</code></button>
+                    <button onclick="doCreateCodeLink()"><code>[`</code>…<code>`](</code>paste<code>)</code></button>
+                </div>
+            </div>
+        </div>
     </div>
     <div id="titleArea">
         <div id="ifAnySelectedCommits">
@@ -187,6 +233,12 @@
                     searchFilter.focus();
                     renderSearchDialog();
                 '>free text</button>
+                <button onclick='
+                    searchFilter.value = `hints.includes("[]") && ` + searchFilter.value;
+                    searchFilter.selectionStart = searchFilter.selectionEnd = 17;
+                    searchFilter.focus();
+                    renderSearchDialog();
+                '>[abbreviated hint]</button>
                 <button onclick='
                     searchFilter.value = `commit.label.length == 0 && ` + searchFilter.value;
                     searchFilter.selectionStart = 0;

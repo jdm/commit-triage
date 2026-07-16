@@ -19,6 +19,12 @@ window.doPrevious = doPrevious;
 window.doSearch = doSearch;
 window.doNextInSearch = doNextInSearch;
 window.doPreviousInSearch = doPreviousInSearch;
+window.doSearchApiDocs = doSearchApiDocs;
+window.doCopyStrong = doCopyStrong;
+window.doCopyStrongSingleQuoted = doCopyStrongSingleQuoted;
+window.doCopyCode = doCopyCode;
+window.doCreateLink = doCreateLink;
+window.doCreateCodeLink = doCreateCodeLink;
 window.copyCommitReferencesToClipboard = copyCommitReferencesToClipboard;
 window.copyCommitSummaryToClipboard = copyCommitSummaryToClipboard;
 window.clearSelection = clearSelection;
@@ -90,6 +96,11 @@ ws.addEventListener("message", event => {
         a.target = "anotherWindow";
     }
 
+    // inject soft hyphens into text that looks like camelCase, UpperCamelCase,
+    // or snake_case. but to avoid false positives, only consider direct
+    // descendant text nodes of <p> and <code>, plus the commit title line.
+    softHyphenify([title, label, ...content.querySelectorAll("p, code")]);
+
     debouncedUpdateGitShow(commitExt.git_show);
 });
 addEventListener("keydown", event => {
@@ -130,6 +141,10 @@ addEventListener("keypress", event => {
         // through `git show` in a nearby terminal. if you then press `Q` to
         // quit the `git show` pager without focusing the terminal, you would
         // quit the commit-triage tool by mistake. so we prevent that.
+        break;
+    case "Enter":
+        // don’t forward Enter to the TUI, because it will open the label editor,
+        // which will eat keys like `+`, `-`, `j`, and `k`.
         break;
     case "+":
         doAccept();
@@ -181,10 +196,13 @@ addEventListener("keypress", event => {
     }
 });
 // when you Shift+scroll, step through commits.
-// unlike Ctrl+scroll, Alt+scroll, and scrolling without modifiers, this does
-// not seem to interfere with typical browser default behaviour.
+// typical browser default behaviour is to scroll horizontally, so ignore the event
+// and let that happen if a dialog is open or the pointer is over `#gitShow`.
 addEventListener("wheel", event => {
     console.log(event);
+    if (dialogs.some(dialog => dialog.open)) {
+        return;
+    }
     if (event.target.id == "gitShow") {
         return;
     }
@@ -242,8 +260,48 @@ function doNextInSearch() {
 function doPreviousInSearch() {
     traverseSearchResults(-1);
 }
+function doSearchApiDocs() {
+    // strip out any soft hyphens from the query, because they break the search.
+    const query = `${getSelection()}`.replace(/\u00AD/g, "");
+    // like `_blank`, but opens in the same tab every time, so you can keep
+    // this tool and the API docs in two separate windows.
+    open(`https://doc.servo.org/servo/?search=${query}`, "anotherWindow");
+}
+function doCopyStrong() {
+    copyTextToClipboard(`**${getSelection()}**`);
+}
+function doCopyStrongSingleQuoted() {
+    copyTextToClipboard(`**‘${getSelection()}’**`);
+}
+function doCopyCode() {
+    copyTextToClipboard(`\`${getSelection()}\``);
+}
+async function doCreateLink() {
+    const url = await navigator.clipboard.readText();
+    copyTextToClipboard(`[${getSelection()}](${url})`);
+}
+async function doCreateCodeLink() {
+    const url = await navigator.clipboard.readText();
+    copyTextToClipboard(`[\`${getSelection()}\`](${url})`);
+}
 function getCommit(number) {
     return commits.find(commit => commit.hash_number == number);
+}
+function softHyphenify(parents) {
+    if (softHyphens.elements.value.value == "off") {
+        return;
+    }
+    for (const parent of parents) {
+        for (const kid of parent.childNodes) {
+            if (kid.nodeName != "#text")
+                continue;
+            const replacement = softHyphens.elements.value.value == "debug"
+                ? "$1-$2"
+                : "$1\u00AD$2";
+            // FIXME: injects extra hyphen in cases like `innerHTML` → `inner-HTM-L`
+            kid.nodeValue = kid.nodeValue.replace(/([a-z]|[A-Z]+)([A-Z]|_)/g, replacement);
+        }
+    }
 }
 function linkify(parents, regex, hrefFn) {
     for (const parent of parents) {
@@ -277,7 +335,9 @@ function copyCommitReferencesToClipboard() {
     const commits = getSelectedCommits();
     const authors = new Set(commits.map(commit => commit.authors).flat());
     const numbers = commits.map(commit => commit.hash_number);
-    const text = `(${[...authors].join(", ")}, ${numbers.join(", ")})`;
+    const text = linkifyCopies.elements.value.value == "on"
+        ? `(${[...authors].map(a => `[${a}](https://github.com/${a.slice(1)})`).join(", ")}, ${numbers.map(n => `[${n}](https://github.com/servo/servo/pull/${n.slice(1)})`).join(", ")})`
+        : `(${[...authors].join(", ")}, ${numbers.join(", ")})`;
     copyTextToClipboard(text);
 }
 function copyCommitSummaryToClipboard() {
@@ -328,3 +388,25 @@ function getSelectedCommits() {
         return [commitExt.commit];
     }
 }
+
+softHyphens.addEventListener("change", event => {
+    console.log(event);
+    sendMessageToServer({"Reload": null});
+}, true);
+document.addEventListener("selectionchange", event => {
+    console.log(event);
+    const selection = getSelection();
+    if (selection.isCollapsed) {
+        selectionToolbox.hidden = true;
+    } else {
+        selectionToolbox.hidden = false;
+        const range = selection.getRangeAt(0);
+        const rects = [...range.getClientRects()];
+        const rect = rects.at(-1);
+        const minX = selectionToolboxContent.offsetWidth;
+        const x = Math.max(rect.right, minX);
+        const y = rect.bottom;
+        selectionToolbox.style.left = `${x}px`;
+        selectionToolbox.style.top = `${y}px`;
+    }
+});

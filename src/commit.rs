@@ -1,9 +1,9 @@
 use std::fmt::Write as _;
 use std::path::Path;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub enum State {
     #[default]
     Untriaged,
@@ -12,7 +12,7 @@ pub enum State {
     Done,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct Commit {
     pub index_in_file: usize,
     pub url: String,

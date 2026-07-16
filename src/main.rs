@@ -194,6 +194,15 @@ impl App {
                             self.commit_tag(true);
                             crate::web::update(&self.commits[self.index]);
                         },
+                        Action::SetState(commits, state) => {
+                            for commit in commits {
+                                if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
+                                    commit.state = state;
+                                }
+                            }
+                            crate::web::update(&self.commits[self.index]);
+                            write_to_file(&self.commits, &self.path, None).unwrap();
+                        },
                         Action::GoToCommit(number) => {
                             if let Some((index, commit)) = self.commits.iter().enumerate().find(|(_, commit)| commit.hash_number.strip_prefix("#") == Some(&number)) {
                                 self.index = index;

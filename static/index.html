@@ -40,14 +40,28 @@
         padding: 0.125rem;
         border-radius: 0.25rem;
     }
-    #toolbar {
+    #toolbar, #ifAnySelectedCommits {
         font-size: 1rem;
         margin: 0.5em 0;
     }
-    #toolbar button {
+    #toolbar button,
+    #ifAnySelectedCommits button {
         margin: 0.125rem 0;
     }
+    #titleArea {
+        font-size: 2rem;
+        margin: 0.5em 0;
+    }
+    #selectCommit {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+    #selectedCommitCount {
+        font-size: 0.75rem;
+    }
     #title {
+        display: inline;
+        font-size: 2rem;
         font-weight: normal;
     }
     #title.Untriaged {
@@ -117,8 +131,26 @@
         <button onclick="doSearch()"><kbd>/</kbd> search</button>
         <button onclick="doNextInSearch()"><kbd>Shift</kbd>+<kbd>J</kbd> next in search</button>
         <button onclick="doPreviousInSearch()"><kbd>Shift</kbd>+<kbd>K</kbd> previous in search</button>
+        <br>
+        <a href="#" onclick="return false"></a>
+        <button onclick="doSelect()" id="selectButton"><kbd>Space</kbd> select</button>
+        <a href="#" onclick="return false"></a>
+        <button onclick="copyCommitReferencesToClipboard()" id="copyReferenceButton"><kbd>Ctrl</kbd>+<kbd>C</kbd> copy reference</button>
     </div>
-    <h1 id="title"></h1>
+    <div id="titleArea">
+        <div id="ifAnySelectedCommits">
+            <button onclick="clearSelection()">clear selection</button>
+            <button onclick="copyCommitReferencesToClipboard()"><kbd>Ctrl</kbd>+<kbd>C</kbd> copy references</button>
+            <button onclick="copyCommitSummaryToClipboard()">copy summary</button>
+            <!-- not currently keyboard bound to `.`, because i worry about accidents -->
+            <button onclick="markCommitsDone()">mark commits done</button>
+        </div>
+        <label for="selectCommit">
+            <input type="checkbox" id="selectCommit"
+            ><span id="selectedCommitCount">(0)</span>
+            <h1 id="title"></h1>
+        </label>
+    </div>
     <div id="meta"></div>
     <div id="label"></div>
     <ul id="hints"></ul>

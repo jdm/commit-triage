@@ -131,9 +131,9 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
                                 info!(?label, "setting label");
                                 ACTION.0.send(Action::SetLabel(label)).await.unwrap();
                             },
-                            Request::SetStateOfCommits(commits, state) => {
+                            Request::SetState(commits, state) => {
                                 info!(?state, ?commits, "setting state in bulk");
-                                ACTION.0.send(Action::SetStateOfCommits(commits, state)).await.unwrap();
+                                ACTION.0.send(Action::SetState(commits, state)).await.unwrap();
                             },
                             Request::GoToCommit(number) => {
                                 info!(?number, "go to commit requested");
@@ -172,8 +172,13 @@ async fn word_cloud() -> Json<Result<WordCloud, &'static str>> {
 pub enum Action {
     Keypress(String),
     SetLabel(String),
-    SetStateOfCommits(Vec<Commit>, State),
+    /// set the [`State`] of the each given [`Commit`].
+    ///
+    /// each `Commit` is looked up internally using its `hash_number`;
+    /// all other fields are ignored.
+    SetState(Vec<Commit>, State),
     GoToCommit(String),
+
     GetCommits(oneshot::Sender<Vec<Commit>>),
     GetWordCloud(oneshot::Sender<Result<WordCloud, &'static str>>),
 }
@@ -189,7 +194,9 @@ struct Response {
 enum Request {
     Keypress(String),
     SetLabel(String),
-    SetStateOfCommits(Vec<Commit>, State),
+    /// see [`Action::SetState`].
+    SetState(Vec<Commit>, State),
     GoToCommit(String),
+
     Reload,
 }

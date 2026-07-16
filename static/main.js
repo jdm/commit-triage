@@ -319,7 +319,7 @@ function clearSelection() {
     updateThingsThatDependOnSelectedCommits();
 }
 function markCommitsDone() {
-    ws.send(JSON.stringify({"SetStateOfCommits": [getSelectedCommits(), "Done"]}));
+    ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Done"]}));
 }
 function getSelectedCommits() {
     if (selectedCommits.size > 0) {

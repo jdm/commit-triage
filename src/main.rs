@@ -194,7 +194,7 @@ impl App {
                             self.commit_tag(true);
                             crate::web::update(&self.commits[self.index]);
                         },
-                        Action::SetStateOfCommits(commits, state) => {
+                        Action::SetState(commits, state) => {
                             for commit in commits {
                                 if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
                                     commit.state = state;

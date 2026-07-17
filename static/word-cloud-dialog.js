@@ -7,15 +7,6 @@ window.updateWordCloud = updateWordCloud;
 
 let wordCloudFirstTime = true;
 
-editorDialog.addEventListener("close", event => {
-    console.log(event);
-    sendMessageToServer({"Reload": null});
-});
-editorForm.addEventListener("submit", event => {
-    console.log(event);
-    sendMessageToServer({"SetLabel": input.value});
-});
-
 export function openWordCloudDialog() {
     wordCloudDialog.showModal();
     if (wordCloudFirstTime) {

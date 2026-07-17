@@ -1,5 +1,6 @@
 import { sendMessageToServer, goToCommit } from "./main.js";
 import { dialogs } from "./dialog-registry.js";
+import { filteredCommits } from "./search-dialog.js";
 dialogs.push(wordCloudDialog);
 
 // used by event handler attributes in index.html
@@ -22,8 +23,14 @@ async function updateWordCloud() {
     pre.innerHTML = "";
     if ("Ok" in json) {
         for (const [word, entries] of json.Ok.words) {
-            pre.append(`[${entries.length}] ${word}\n`);
-            for (const entry of entries) {
+            const filteredEntries = entries.filter(entry => filteredCommits.some(commit => commit.hash_number == entry.hash_number));
+            const hiddenCount = entries.length - filteredEntries.length;
+            if (hiddenCount > 0) {
+                pre.append(`${word} [${filteredEntries.length} (+${hiddenCount})]\n`);
+            } else {
+                pre.append(`${word} [${entries.length}]\n`);
+            }
+            for (const entry of filteredEntries) {
                 const a = document.createElement("a");
                 a.addEventListener("click", event => {
                     event.preventDefault();
@@ -34,6 +41,7 @@ async function updateWordCloud() {
                 a.href = `#`;
                 pre.append(a, ` - ${entry.title}\n`);
             }
+            pre.append(`\n`);
         }
     } else if ("Err" in json) {
         pre.append(`>>> error: ${json.Err}`);

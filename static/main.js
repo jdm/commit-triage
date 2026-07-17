@@ -175,10 +175,10 @@ addEventListener("keypress", event => {
         doGoToCommit();
         break;
     case "j":
-        doNext();
+        doNextInSearch();
         break;
     case "k":
-        doPrevious();
+        doPreviousInSearch();
         break;
     case "/":
         // suppress firefox “quick find”
@@ -186,10 +186,10 @@ addEventListener("keypress", event => {
         doSearch();
         break;
     case "J":
-        doNextInSearch();
+        doNext();
         break;
     case "K":
-        doPreviousInSearch();
+        doPrevious();
         break;
     default:
         sendMessageToServer({"Keypress": event.key});

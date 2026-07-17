@@ -1,4 +1,5 @@
 import { sendMessageToServer } from "./main.js";
+import { getSelectedCommits } from "./commit-registry.js";
 import { dialogs } from "./dialog-registry.js";
 dialogs.push(editorDialog);
 
@@ -8,7 +9,7 @@ editorDialog.addEventListener("close", event => {
 });
 editorForm.addEventListener("submit", event => {
     console.log(event);
-    sendMessageToServer({"SetLabel": input.value});
+    sendMessageToServer({"SetLabel": [getSelectedCommits(), input.value]});
 });
 
 export function openEditorDialog() {

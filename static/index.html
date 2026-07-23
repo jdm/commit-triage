@@ -52,6 +52,9 @@
     #ifAnySelectedCommits button {
         margin: 0.125rem 0;
     }
+    #commitScrollArea {
+        float: right;
+    }
     #selectionToolbox {
         position: fixed;
         width: 0;
@@ -145,6 +148,7 @@
 </style>
 <main>
     <div id="toolbar">
+        <button id="commitScrollArea" disabled>scroll<br>here to<br>navigate<br>commits</button>
         <button onclick="doAccept()" id="acceptButton"><kbd>+</kbd> accept</button>
         <button onclick="doIgnore()" id="ignoreButton"><kbd>−</kbd> ignore</button>
         <button onclick="doDone()" id="doneButton"><kbd><b>.</b></kbd> done</button>

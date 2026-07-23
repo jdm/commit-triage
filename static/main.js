@@ -200,24 +200,18 @@ addEventListener("keypress", event => {
 // and let that happen if a dialog is open or the pointer is over `#gitShow`.
 addEventListener("wheel", event => {
     console.log(event);
-    if (dialogs.some(dialog => dialog.open)) {
-        return;
+    if (event.target.id == "commitScrollArea") {
+        event.preventDefault();
+        if (event.deltaY > 0) {
+            doNextInSearch();
+            return;
+        }
+        if (event.deltaY < 0) {
+            doPreviousInSearch();
+            return;
+        }
     }
-    if (event.target.id == "gitShow") {
-        return;
-    }
-    if (!event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
-        return;
-    }
-    if (event.deltaY > 0) {
-        doNextInSearch();
-        return;
-    }
-    if (event.deltaY < 0) {
-        doPreviousInSearch();
-        return;
-    }
-});
+}, {passive: false});
 openSearchDialog();
 
 function doAccept() {

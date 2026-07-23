@@ -221,16 +221,31 @@ addEventListener("wheel", event => {
 openSearchDialog();
 
 function doAccept() {
-    sendMessageToServer({"Keypress": "+"});
-    doNextInSearch();
+    if (!confirmBulkAction(n => `mark ${n} commits Accepted?`)) {
+        return;
+    }
+    markCommitsAccepted();
+    if (!commitSelectionIsActive()) {
+        doNextInSearch();
+    }
 }
 function doIgnore() {
-    sendMessageToServer({"Keypress": "-"});
-    doNextInSearch();
+    if (!confirmBulkAction(n => `mark ${n} commits Ignored?`)) {
+        return;
+    }
+    markCommitsIgnored();
+    if (!commitSelectionIsActive()) {
+        doNextInSearch();
+    }
 }
 function doDone() {
-    sendMessageToServer({"Keypress": "."});
-    doNextInSearch();
+    if (!confirmBulkAction(n => `mark ${n} commits Done?`)) {
+        return;
+    }
+    markCommitsDone();
+    if (!commitSelectionIsActive()) {
+        doNextInSearch();
+    }
 }
 function doLabel() {
     openEditorDialog();
@@ -286,6 +301,15 @@ async function doCreateCodeLink() {
 }
 function getCommit(number) {
     return commits.find(commit => commit.hash_number == number);
+}
+function markCommitsAccepted() {
+    ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Accepted"]}));
+}
+function markCommitsIgnored() {
+    ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Ignored"]}));
+}
+function markCommitsDone() {
+    ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Done"]}));
 }
 function softHyphenify(parents) {
     if (softHyphens.elements.value.value == "off") {
@@ -369,6 +393,10 @@ function updateSelectCommit() {
     selectCommit.checked = selectedCommits.has(commitExt.commit.hash_number);
 }
 function updateThingsThatDependOnSelectedCommits() {
+    acceptButton.disabled = (selectedCommits.size > 0);
+    ignoreButton.disabled = (selectedCommits.size > 0);
+    doneButton.disabled = (selectedCommits.size > 0);
+    labelButton.disabled = (selectedCommits.size > 0);
     copyReferenceButton.disabled = (selectedCommits.size > 0);
     ifAnySelectedCommits.hidden = (selectedCommits.size == 0);
     selectedCommitCount.textContent = `(${selectedCommits.size})`;
@@ -378,15 +406,19 @@ function clearSelection() {
     updateSelectCommit();
     updateThingsThatDependOnSelectedCommits();
 }
-function markCommitsDone() {
-    ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Done"]}));
-}
-function getSelectedCommits() {
-    if (selectedCommits.size > 0) {
+export function getSelectedCommits() {
+    if (commitSelectionIsActive()) {
         return [...selectedCommits].map(number => getCommit(number));
     } else {
         return [commitExt.commit];
     }
+}
+export function commitSelectionIsActive() {
+    return selectedCommits.size > 0;
+}
+/// usage: ``if (!confirmBulkAction(n => `do something to ${n} commits?`)) return;``
+export function confirmBulkAction(messageFn) {
+    return !commitSelectionIsActive() || confirm(messageFn(getSelectedCommits().length));
 }
 
 softHyphens.addEventListener("change", event => {

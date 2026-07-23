@@ -42,7 +42,11 @@
     }
     #toolbar, #ifAnySelectedCommits {
         font-size: 1rem;
-        margin: 0.5em 0;
+        margin: 0 -1rem;
+        padding: 0.5rem;
+    }
+    #toolbar, #selectionToolboxContent {
+        background: color-mix(in oklab, #1192e8, 80% white);
     }
     #toolbar button,
     #ifAnySelectedCommits button {
@@ -58,7 +62,6 @@
         right: 0;
         display: flex;
         flex-flow: column nowrap;
-        background: white;
     }
     #selectionToolbox fieldset {
         display: flex;
@@ -68,6 +71,9 @@
     #selectionToolbox button {
         margin: 0;
         white-space: nowrap;
+    }
+    #selectionToolbox #searchApiDocs {
+        margin: 0.5rem 0.5rem 0;
     }
     #titleArea {
         font-size: 2rem;
@@ -139,10 +145,10 @@
 </style>
 <main>
     <div id="toolbar">
-        <button onclick="doAccept()"><kbd>+</kbd> accept</button>
-        <button onclick="doIgnore()"><kbd>−</kbd> ignore</button>
-        <button onclick="doDone()"><kbd><b>.</b></kbd> done</button>
-        <button onclick="doLabel()"><kbd>T</kbd> label</button>
+        <button onclick="doAccept()" id="acceptButton"><kbd>+</kbd> accept</button>
+        <button onclick="doIgnore()" id="ignoreButton"><kbd>−</kbd> ignore</button>
+        <button onclick="doDone()" id="doneButton"><kbd><b>.</b></kbd> done</button>
+        <button onclick="doLabel()" id="labelButton"><kbd>T</kbd> label</button>
         <br>
         <button onclick="doWordCloud()"><kbd>W</kbd> word cloud</button>
         <button onclick="doGoToCommit()"><kbd>G</kbd> go to commit</button>
@@ -171,7 +177,7 @@
         </form>
         <div id="selectionToolbox" hidden>
             <div id="selectionToolboxContent">
-                <button onclick="doSearchApiDocs()">search API docs</button>
+                <button id="searchApiDocs" onclick="doSearchApiDocs()">search API docs</button>
                 <fieldset>
                     <legend>or copy:</legend>
                     <button onclick="doCopyStrong()"><code>**</code>…<code>**</code></button>
@@ -185,11 +191,14 @@
     </div>
     <div id="titleArea">
         <div id="ifAnySelectedCommits">
+            <button onclick="doAccept()"><kbd>+</kbd> accept all</button>
+            <button onclick="doIgnore()"><kbd>−</kbd> ignore all</button>
+            <button onclick="doDone()"><kbd><b>.</b></kbd> done all</button>
+            <button onclick="doLabel()"><kbd>T</kbd> label all</button>
+            <br>
             <button onclick="clearSelection()">clear selection</button>
             <button onclick="copyCommitReferencesToClipboard()"><kbd>Ctrl</kbd>+<kbd>C</kbd> copy references</button>
             <button onclick="copyCommitSummaryToClipboard()">copy summary</button>
-            <!-- not currently keyboard bound to `.`, because i worry about accidents -->
-            <button onclick="markCommitsDone()">mark commits done</button>
         </div>
         <label for="selectCommit">
             <input type="checkbox" id="selectCommit"

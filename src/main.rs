@@ -189,10 +189,14 @@ impl App {
                                 self.handle_key_event(key_event, true);
                             }
                         },
-                        Action::SetLabel(label) => {
-                            self.input = label;
-                            self.commit_tag(true);
+                        Action::SetLabel(commits, label) => {
+                            for commit in commits {
+                                if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
+                                    commit.label = label.clone();
+                                }
+                            }
                             crate::web::update(&self.commits[self.index]);
+                            write_to_file(&self.commits, &self.path, None).unwrap();
                         },
                         Action::SetState(commits, state) => {
                             for commit in commits {

@@ -428,10 +428,21 @@ document.addEventListener("selectionchange", event => {
         selectionToolbox.hidden = false;
         const range = selection.getRangeAt(0);
         const rects = [...range.getClientRects()];
-        const rect = rects.at(-1);
+        // getClientRects() on Range is guaranteed to return the rects in content order,
+        // and i’ve never seen it merge lines, so `.at(-1)` gives us the last line’s rect.
+        const lastLineRect = rects.at(-1);
+        // the selection toolbox hangs down and to the left of the selection’s bottom right corner,
+        // but we don’t want it to go past the left edge or the bottom edge of the viewport.
+        // define the minimum `x` and the maximum `y` of the selection’s bottom right corner,
+        // beyond which we’ll do something special.
         const minX = selectionToolboxContent.offsetWidth;
-        const x = Math.max(rect.right, minX);
-        const y = rect.bottom;
+        const maxY = innerHeight - selectionToolboxContent.offsetHeight;
+        // if `x` < `minX`, clamp the selection toolbox to the left edge of the viewport.
+        // if `y` > `maxY`, have the selection toolbox sit above the last line of text.
+        const x = Math.max(lastLineRect.right, minX);
+        const y = lastLineRect.bottom <= maxY
+            ? lastLineRect.bottom
+            : lastLineRect.top - selectionToolboxContent.offsetHeight;
         selectionToolbox.style.left = `${x}px`;
         selectionToolbox.style.top = `${y}px`;
     }

@@ -436,3 +436,15 @@ document.addEventListener("selectionchange", event => {
         selectionToolbox.style.top = `${y}px`;
     }
 });
+// ergonomics fix: avoid interfering with text selection,
+// if the pointer moves onto `#selectionToolbox`.
+addEventListener("mousedown", event => {
+    console.log(event);
+    if (event.target.closest("#selectionToolbox") == null) {
+        selectionToolbox.inert = true;
+    }
+});
+addEventListener("mouseup", event => {
+    console.log(event);
+    selectionToolbox.inert = false;
+});

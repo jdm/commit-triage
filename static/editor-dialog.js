@@ -1,5 +1,4 @@
-import { sendMessageToServer } from "./main.js";
-import { getSelectedCommits } from "./commit-registry.js";
+import { sendMessageToServer, getSelectedCommits, confirmBulkAction } from "./main.js";
 import { dialogs } from "./dialog-registry.js";
 dialogs.push(editorDialog);
 
@@ -9,6 +8,9 @@ editorDialog.addEventListener("close", event => {
 });
 editorForm.addEventListener("submit", event => {
     console.log(event);
+    if (!confirmBulkAction(n => `label ${n} commits?`)) {
+        return;
+    }
     sendMessageToServer({"SetLabel": [getSelectedCommits(), input.value]});
 });
 

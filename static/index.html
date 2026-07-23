@@ -139,10 +139,10 @@
 </style>
 <main>
     <div id="toolbar">
-        <button onclick="doAccept()"><kbd>+</kbd> accept</button>
-        <button onclick="doIgnore()"><kbd>−</kbd> ignore</button>
-        <button onclick="doDone()"><kbd><b>.</b></kbd> done</button>
-        <button onclick="doLabel()"><kbd>T</kbd> label</button>
+        <button onclick="doAccept()" id="acceptButton"><kbd>+</kbd> accept</button>
+        <button onclick="doIgnore()" id="ignoreButton"><kbd>−</kbd> ignore</button>
+        <button onclick="doDone()" id="doneButton"><kbd><b>.</b></kbd> done</button>
+        <button onclick="doLabel()" id="labelButton"><kbd>T</kbd> label</button>
         <br>
         <button onclick="doWordCloud()"><kbd>W</kbd> word cloud</button>
         <button onclick="doGoToCommit()"><kbd>G</kbd> go to commit</button>
@@ -185,11 +185,14 @@
     </div>
     <div id="titleArea">
         <div id="ifAnySelectedCommits">
+            <button onclick="doAccept()"><kbd>+</kbd> accept all</button>
+            <button onclick="doIgnore()"><kbd>−</kbd> ignore all</button>
+            <button onclick="doDone()"><kbd><b>.</b></kbd> done all</button>
+            <button onclick="doLabel()"><kbd>T</kbd> label all</button>
+            <br>
             <button onclick="clearSelection()">clear selection</button>
             <button onclick="copyCommitReferencesToClipboard()"><kbd>Ctrl</kbd>+<kbd>C</kbd> copy references</button>
             <button onclick="copyCommitSummaryToClipboard()">copy summary</button>
-            <!-- not currently keyboard bound to `.`, because i worry about accidents -->
-            <button onclick="markCommitsDone()">mark commits done</button>
         </div>
         <label for="selectCommit">
             <input type="checkbox" id="selectCommit"

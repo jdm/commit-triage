@@ -45,7 +45,7 @@
         margin: 0 -1rem;
         padding: 0.5rem;
     }
-    #toolbar {
+    #toolbar, #selectionToolboxContent {
         background: color-mix(in oklab, #1192e8, 80% white);
     }
     #toolbar button,
@@ -62,7 +62,6 @@
         right: 0;
         display: flex;
         flex-flow: column nowrap;
-        background: white;
     }
     #selectionToolbox fieldset {
         display: flex;
@@ -72,6 +71,9 @@
     #selectionToolbox button {
         margin: 0;
         white-space: nowrap;
+    }
+    #selectionToolbox #searchApiDocs {
+        margin: 0.5rem 0.5rem 0;
     }
     #titleArea {
         font-size: 2rem;
@@ -175,7 +177,7 @@
         </form>
         <div id="selectionToolbox" hidden>
             <div id="selectionToolboxContent">
-                <button onclick="doSearchApiDocs()">search API docs</button>
+                <button id="searchApiDocs" onclick="doSearchApiDocs()">search API docs</button>
                 <fieldset>
                     <legend>or copy:</legend>
                     <button onclick="doCopyStrong()"><code>**</code>…<code>**</code></button>

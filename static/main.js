@@ -175,10 +175,10 @@ addEventListener("keypress", event => {
         doGoToCommit();
         break;
     case "j":
-        doNext();
+        doNextInSearch();
         break;
     case "k":
-        doPrevious();
+        doPreviousInSearch();
         break;
     case "/":
         // suppress firefox “quick find”
@@ -186,10 +186,10 @@ addEventListener("keypress", event => {
         doSearch();
         break;
     case "J":
-        doNextInSearch();
+        doNext();
         break;
     case "K":
-        doPreviousInSearch();
+        doPrevious();
         break;
     default:
         sendMessageToServer({"Keypress": event.key});
@@ -200,24 +200,18 @@ addEventListener("keypress", event => {
 // and let that happen if a dialog is open or the pointer is over `#gitShow`.
 addEventListener("wheel", event => {
     console.log(event);
-    if (dialogs.some(dialog => dialog.open)) {
-        return;
+    if (event.target.id == "commitScrollArea") {
+        event.preventDefault();
+        if (event.deltaY > 0) {
+            doNextInSearch();
+            return;
+        }
+        if (event.deltaY < 0) {
+            doPreviousInSearch();
+            return;
+        }
     }
-    if (event.target.id == "gitShow") {
-        return;
-    }
-    if (!event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
-        return;
-    }
-    if (event.deltaY > 0) {
-        doNextInSearch();
-        return;
-    }
-    if (event.deltaY < 0) {
-        doPreviousInSearch();
-        return;
-    }
-});
+}, {passive: false});
 openSearchDialog();
 
 function doAccept() {
@@ -434,11 +428,34 @@ document.addEventListener("selectionchange", event => {
         selectionToolbox.hidden = false;
         const range = selection.getRangeAt(0);
         const rects = [...range.getClientRects()];
-        const rect = rects.at(-1);
+        // getClientRects() on Range is guaranteed to return the rects in content order,
+        // and i’ve never seen it merge lines, so `.at(-1)` gives us the last line’s rect.
+        const lastLineRect = rects.at(-1);
+        // the selection toolbox hangs down and to the left of the selection’s bottom right corner,
+        // but we don’t want it to go past the left edge or the bottom edge of the viewport.
+        // define the minimum `x` and the maximum `y` of the selection’s bottom right corner,
+        // beyond which we’ll do something special.
         const minX = selectionToolboxContent.offsetWidth;
-        const x = Math.max(rect.right, minX);
-        const y = rect.bottom;
+        const maxY = innerHeight - selectionToolboxContent.offsetHeight;
+        // if `x` < `minX`, clamp the selection toolbox to the left edge of the viewport.
+        // if `y` > `maxY`, have the selection toolbox sit above the last line of text.
+        const x = Math.max(lastLineRect.right, minX);
+        const y = lastLineRect.bottom <= maxY
+            ? lastLineRect.bottom
+            : lastLineRect.top - selectionToolboxContent.offsetHeight;
         selectionToolbox.style.left = `${x}px`;
         selectionToolbox.style.top = `${y}px`;
     }
+});
+// ergonomics fix: avoid interfering with text selection,
+// if the pointer moves onto `#selectionToolbox`.
+addEventListener("mousedown", event => {
+    console.log(event);
+    if (event.target.closest("#selectionToolbox") == null) {
+        selectionToolbox.inert = true;
+    }
+});
+addEventListener("mouseup", event => {
+    console.log(event);
+    selectionToolbox.inert = false;
 });

@@ -280,21 +280,29 @@ function doSearchApiDocs() {
     open(`https://doc.servo.org/servo/?search=${query}`, "anotherWindow");
 }
 function doCopyStrong() {
-    copyTextToClipboard(`**${getSelection()}**`);
+    const escapedSelection = escapeForCopyingMarkdown(`${getSelection()}`);
+    copyTextToClipboard(`**${escapedSelection}**`);
 }
 function doCopyStrongSingleQuoted() {
-    copyTextToClipboard(`**‘${getSelection()}’**`);
+    const escapedSelection = escapeForCopyingMarkdown(`${getSelection()}`);
+    copyTextToClipboard(`**‘${escapedSelection}’**`);
 }
 function doCopyCode() {
-    copyTextToClipboard(`\`${getSelection()}\``);
+    const escapedSelection = escapeForCopyingMarkdown(`${getSelection()}`);
+    copyTextToClipboard(`\`${escapedSelection}\``);
 }
 async function doCreateLink() {
+    const escapedSelection = escapeForCopyingMarkdown(`${getSelection()}`);
     const url = await navigator.clipboard.readText();
-    copyTextToClipboard(`[${getSelection()}](${url})`);
+    copyTextToClipboard(`[${escapedSelection}](${url})`);
 }
 async function doCreateCodeLink() {
+    const escapedSelection = escapeForCopyingMarkdown(`${getSelection()}`);
     const url = await navigator.clipboard.readText();
-    copyTextToClipboard(`[\`${getSelection()}\`](${url})`);
+    copyTextToClipboard(`[\`${escapedSelection}\`](${url})`);
+}
+function escapeForCopyingMarkdown(text) {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 }
 function getCommit(number) {
     return commits.find(commit => commit.hash_number == number);

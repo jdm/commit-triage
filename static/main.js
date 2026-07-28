@@ -12,6 +12,7 @@ window.doIgnore = doIgnore;
 window.doDone = doDone;
 window.doLabel = doLabel;
 window.doSelect = doSelect;
+window.doReselect = doReselect;
 window.doWordCloud = doWordCloud;
 window.doGoToCommit = doGoToCommit;
 window.doNext = doNext;
@@ -250,6 +251,16 @@ function doLabel() {
 function doSelect() {
     selectCommit.checked = !selectCommit.checked;
     selectCommitChanged();
+}
+function doReselect() {
+    const input = prompt("select commit numbers:", "(@handle, @handle, #number, #number)");
+    for (const hash_number of input.match(/#[0-9]+/g) ?? []) {
+        if (getCommit(hash_number) != null) {
+            selectedCommits.add(hash_number);
+        }
+    }
+    updateSelectCommit();
+    updateThingsThatDependOnSelectedCommits();
 }
 function doWordCloud() {
     openWordCloudDialog();

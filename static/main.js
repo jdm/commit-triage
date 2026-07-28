@@ -4,7 +4,7 @@ import { dialogs } from "./dialog-registry.js";
 import { openEditorDialog } from "./editor-dialog.js";
 import { openWordCloudDialog } from "./word-cloud-dialog.js";
 import { openGotoDialog } from "./goto-dialog.js";
-import { commits, openSearchDialog, traverseSearchResults } from "./search-dialog.js";
+import { commits, filteredCommits, openSearchDialog, traverseSearchResults } from "./search-dialog.js";
 
 // used by event handler attributes in index.html
 window.doAccept = doAccept;
@@ -12,6 +12,7 @@ window.doIgnore = doIgnore;
 window.doDone = doDone;
 window.doLabel = doLabel;
 window.doSelect = doSelect;
+window.doSelectAll = doSelectAll;
 window.doReselect = doReselect;
 window.doWordCloud = doWordCloud;
 window.doGoToCommit = doGoToCommit;
@@ -251,6 +252,13 @@ function doLabel() {
 function doSelect() {
     selectCommit.checked = !selectCommit.checked;
     selectCommitChanged();
+}
+function doSelectAll() {
+    for (const commit of filteredCommits) {
+        selectedCommits.add(commit.hash_number);
+    }
+    updateSelectCommit();
+    updateThingsThatDependOnSelectedCommits();
 }
 function doReselect() {
     const input = prompt("select commit numbers:", "(@handle, @handle, #number, #number)");

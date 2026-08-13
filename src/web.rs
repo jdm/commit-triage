@@ -70,26 +70,36 @@ pub fn shutdown() {
 }
 
 pub fn update(commit: &Commit) {
+    let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
+        std::fs::read_to_string(path.join(&commit.hash)).unwrap_or_else(|_| "".to_owned())
+    } else {
+        "[enable `git show` output with --git-show-cache-path]".to_owned()
+    };
+    let highfive_answers = if let Some(path) = ARGS.highfive_answers_path.as_ref() {
+        std::fs::read_to_string(path.join(commit.number())).ok()
+    } else {
+        Some("[enable Highfive answers with --highfive-answers-path]".to_owned())
+    };
+    let content = Response {
+        commit: commit.clone(),
+        rendered_body: safe_render_markdown(&commit.body.join("\n")),
+        git_show,
+        rendered_highfive_answers: highfive_answers.map(|answers| safe_render_markdown(&answers)),
+    };
+    *CONTENT.write().unwrap() = serde_json::to_string(&content).unwrap();
+    UPDATE.0.send(()).unwrap();
+}
+
+fn safe_render_markdown(unsafe_markdown: &str) -> String {
     let mut options = comrak::Options::default();
     options.extension.autolink = true;
     options.extension.table = true;
     options.render.gfm_quirks = true;
     options.render.hardbreaks = true;
     options.render.r#unsafe = true;
-    let unsafe_body = markdown_to_html(&commit.body.join("\n"), &options);
-    let body = ammonia::clean(&unsafe_body);
-    let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
-        std::fs::read_to_string(path.join(&commit.hash)).unwrap_or_else(|_| "".to_owned())
-    } else {
-        "[enable `git show` output with --git-show-cache-path]".to_owned()
-    };
-    let content = Response {
-        commit: commit.clone(),
-        rendered_body: body,
-        git_show,
-    };
-    *CONTENT.write().unwrap() = serde_json::to_string(&content).unwrap();
-    UPDATE.0.send(()).unwrap();
+    let unsafe_html = markdown_to_html(unsafe_markdown, &options);
+    let safe_html = ammonia::clean(&unsafe_html);
+    safe_html
 }
 
 #[get("/ws")]
@@ -192,6 +202,7 @@ struct Response {
     commit: Commit,
     rendered_body: String,
     git_show: String,
+    rendered_highfive_answers: Option<String>,
 }
 
 #[derive(Deserialize)]

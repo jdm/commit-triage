@@ -103,6 +103,17 @@
     #title.Accepted {
         color: green;
     }
+    #answersBox {
+        border: thin solid #1192e8;
+        padding: 0 1em;
+    }
+    #answers:empty:before {
+        content: "BUG: has “monthly update” label but no Highfive answers?";
+        display: block;
+        margin: 1em 0;
+        font-style: italic;
+        opacity: 0.5;
+    }
     #gitShow {
         flex: 1 0 40rem;
         max-height: 100vh;
@@ -213,7 +224,10 @@
     <div id="meta"></div>
     <div id="label"></div>
     <ul id="hints"></ul>
-    <hr>
+    <div id="answersBox">
+        <div id="answers"></div>
+    </div>
+    <hr id="noAnswers">
     <div id="content"></div>
 </main>
 <pre id="gitShow"></pre>

@@ -54,6 +54,9 @@ ws.addEventListener("message", event => {
         li.append(hint);
         hints.append(li);
     }
+    answersBox.hidden = commitExt.rendered_highfive_answers == null;
+    noAnswers.hidden = commitExt.rendered_highfive_answers != null;
+    answers.innerHTML = commitExt.rendered_highfive_answers;
     content.innerHTML = commitExt.rendered_body;
     input.value = commitExt.commit.label;
 

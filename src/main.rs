@@ -64,6 +64,10 @@ pub struct Args {
     #[arg(long)]
     git_show_output_cache_path: Option<PathBuf>,
 
+    /// read Highfive answers from this directory
+    #[arg(long)]
+    highfive_answers_path: Option<PathBuf>,
+
     /// compute word clouds with this dictionary file
     #[arg(long, default_value = "/usr/share/dict/words")]
     dictionary_path: PathBuf,

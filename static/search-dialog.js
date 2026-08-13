@@ -31,9 +31,15 @@ async function updateSearch() {
 }
 function renderSearchDialog() {
     const filterFn = searchFilter.value.length > 0
-        ? eval(`(commit, text, hints) => ${searchFilter.value}`)
-        : (_commits, _text, _hints) => true;
-    filteredCommits = commits.filter(commit => filterFn(commit, [titleWithAbbreviatedHints(commit), ...commit.body].join("\n"), abbreviatedHints(commit)));
+        ? eval(`(commit, text, textLower, hints) => ${searchFilter.value}`)
+        : () => true;
+    const text = commit => [titleWithAbbreviatedHints(commit), ...commit.body].join("\n");
+    filteredCommits = commits.filter(commit => filterFn(
+        commit,
+        text(commit),
+        text(commit).toLowerCase(),
+        abbreviatedHints(commit),
+    ));
     // only clear the <pre> if the filtering ran without throwing.
     const pre = searchDialog.querySelector("pre");
     pre.innerHTML = `${filteredCommits.length}/${commits.length} commits:\n`;

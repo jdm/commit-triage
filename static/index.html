@@ -243,10 +243,10 @@
     <div>
         <button onclick="updateSearch()">update</button>
         <div style="flex-flow: column nowrap; flex: 1 1 auto;">
-            <input id="searchFilter" placeholder="JS filter ((commit, text) => ...)"
+            <input id="searchFilter" placeholder="JS filter ((commit, text, textLower, hints) => ...)"
                 value='commit.state == "Untriaged" && !commit.authors.includes("@servo-wpt-sync") && !commit.authors.includes("@dependabot[bot]")'
                 onchange="renderSearchDialog()" oninput="renderSearchDialog()">
-            <div>
+            <div style="flex-flow: row wrap;">
                 <button onclick='
                     searchFilter.value = searchFilter.getAttribute("value");
                     renderSearchDialog();
@@ -257,11 +257,17 @@
                 '>i’m writing</button>
                 or add search criteria:
                 <button onclick='
-                    searchFilter.value = `text.includes("") && ` + searchFilter.value;
+                    searchFilter.value = `textLower.includes("") && ` + searchFilter.value;
                     searchFilter.selectionStart = searchFilter.selectionEnd = 15;
                     searchFilter.focus();
                     renderSearchDialog();
                 '>free text</button>
+                <button onclick='
+                    searchFilter.value = `text.includes("") && ` + searchFilter.value;
+                    searchFilter.selectionStart = searchFilter.selectionEnd = 20;
+                    searchFilter.focus();
+                    renderSearchDialog();
+                '>free text (case-sensitive)</button>
                 <button onclick='
                     searchFilter.value = `hints.includes("[]") && ` + searchFilter.value;
                     searchFilter.selectionStart = searchFilter.selectionEnd = 17;

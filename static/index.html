@@ -153,6 +153,9 @@
         flex: 1 1 auto;
         overflow: scroll;
     }
+    #savedSearches {
+        display: contents;
+    }
     #input {
         width: 100%;
     }
@@ -281,6 +284,54 @@
                     searchFilter.focus();
                     renderSearchDialog();
                 '>unlabelled</button>
+            </div>
+            <div>
+                <button onclick='saveSearch()'>save</button>
+                or apply a saved search:
+                <label>
+                    <input id="addMode" name="addReplace" type="radio" value="add" accesskey="a" checked>
+                    <u>a</u>dd
+                </label>
+                <label>
+                    <input id="replaceMode" name="addReplace" type="radio" value="replace" accesskey="r">
+                    <u>r</u>eplace
+                </label>
+                <div id="savedSearches"></div>
+                <script>
+                    updateSavedSearches();
+                    function readSavedSearches() {
+                        return JSON.parse(localStorage.getItem("commit-triage:savedSearches")) ?? [];
+                    }
+                    function writeSavedSearches(searches) {
+                        localStorage.setItem("commit-triage:savedSearches", JSON.stringify(searches));
+                    }
+                    function saveSearch() {
+                        const searches = readSavedSearches();
+                        searches.push({name: prompt("name?"), value: searchFilter.value});
+                        writeSavedSearches(searches);
+                        updateSavedSearches();
+                    }
+                    function updateSavedSearches() {
+                        const searches = readSavedSearches();
+                        savedSearches.textContent = "";
+                        for (const {name, value} of searches) {
+                            const button = document.createElement("button");
+                            savedSearches.append(button);
+                            button.textContent = name;
+                            button.addEventListener("click", () => {
+                                if (addMode.checked) {
+                                    searchFilter.value = `(${value}) && ${searchFilter.value}`;
+                                    searchFilter.selectionStart = 1;
+                                    searchFilter.selectionEnd = 1 + value.length;
+                                    searchFilter.focus();
+                                } else if (replaceMode.checked) {
+                                    searchFilter.value = value;
+                                }
+                                renderSearchDialog();
+                            });
+                        }
+                    }
+                </script>
             </div>
         </div>
     </div>

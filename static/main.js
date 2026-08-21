@@ -10,6 +10,7 @@ import { commits, filteredCommits, openSearchDialog, traverseSearchResults } fro
 window.doAccept = doAccept;
 window.doIgnore = doIgnore;
 window.doDone = doDone;
+window.doUntriage = doUntriage;
 window.doLabel = doLabel;
 window.doSelect = doSelect;
 window.doSelectAll = doSelectAll;
@@ -160,6 +161,9 @@ addEventListener("keypress", event => {
     case ".":
         doDone();
         break;
+    case "u":
+        doUntriage();
+        break;
     case "t":
         doLabel();
         break;
@@ -242,6 +246,15 @@ function doDone() {
         return;
     }
     markCommitsDone();
+    if (!commitSelectionIsActive()) {
+        doNextInSearch();
+    }
+}
+function doUntriage() {
+    if (!confirmBulkAction(n => `mark ${n} commits Untriaged?`)) {
+        return;
+    }
+    markCommitsUntriaged();
     if (!commitSelectionIsActive()) {
         doNextInSearch();
     }
@@ -335,6 +348,9 @@ function markCommitsIgnored() {
 function markCommitsDone() {
     ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Done"]}));
 }
+function markCommitsUntriaged() {
+    ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Untriaged"]}));
+}
 function softHyphenify(parents) {
     if (softHyphens.elements.value.value == "off") {
         return;
@@ -420,6 +436,7 @@ function updateThingsThatDependOnSelectedCommits() {
     acceptButton.disabled = (selectedCommits.size > 0);
     ignoreButton.disabled = (selectedCommits.size > 0);
     doneButton.disabled = (selectedCommits.size > 0);
+    untriageButton.disabled = (selectedCommits.size > 0);
     labelButton.disabled = (selectedCommits.size > 0);
     copyReferenceButton.disabled = (selectedCommits.size > 0);
     ifAnySelectedCommits.hidden = (selectedCommits.size == 0);

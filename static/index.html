@@ -260,17 +260,12 @@
                 '>i’m writing</button>
                 or add search criteria:
                 <button onclick='
-                    searchFilter.value = `textLower.includes("") && ` + searchFilter.value;
-                    searchFilter.selectionStart = searchFilter.selectionEnd = 20;
+                    searchFilter.value = `/.*/i.test(text) && ` + searchFilter.value;
+                    searchFilter.selectionStart = 1;
+                    searchFilter.selectionEnd = 3;
                     searchFilter.focus();
                     renderSearchDialog();
                 '>free text</button>
-                <button onclick='
-                    searchFilter.value = `text.includes("") && ` + searchFilter.value;
-                    searchFilter.selectionStart = searchFilter.selectionEnd = 15;
-                    searchFilter.focus();
-                    renderSearchDialog();
-                '>free text (case-sensitive)</button>
                 <button onclick='
                     searchFilter.value = `hints.includes("[]") && ` + searchFilter.value;
                     searchFilter.selectionStart = searchFilter.selectionEnd = 17;

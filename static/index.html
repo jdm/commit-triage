@@ -301,8 +301,12 @@
                         localStorage.setItem("commit-triage:savedSearches", JSON.stringify(searches));
                     }
                     function saveSearch() {
+                        const name = prompt("name?");
+                        if (name == null) {
+                            return;
+                        }
                         const searches = readSavedSearches();
-                        searches.push({name: prompt("name?"), value: searchFilter.value});
+                        searches.push({name, value: searchFilter.value});
                         writeSavedSearches(searches);
                         updateSavedSearches();
                     }

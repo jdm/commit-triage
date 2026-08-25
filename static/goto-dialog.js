@@ -14,6 +14,6 @@ gotoForm.addEventListener("submit", event => {
 
 export function openGotoDialog() {
     gotoDialog.showModal();
-    gotoInput.value = commitExt.commit.hash_number.slice(1);
+    gotoInput.value = commitExt.hash_number.slice(1);
     gotoInput.select();
 }

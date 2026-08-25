@@ -48,12 +48,12 @@ ws.addEventListener("message", event => {
     setCommitExt(JSON.parse(event.data));
     updateSelectCommit();
     updateThingsThatDependOnSelectedCommits();
-    title.className = commitExt.commit.state;
-    title.textContent = commitExt.commit.title;
-    meta.textContent = `${commitExt.commit.date} – ${commitExt.commit.authors.join(", ")}`;
-    label.textContent = commitExt.commit.label;
+    title.className = commitExt.state;
+    title.textContent = commitExt.title;
+    meta.textContent = `${commitExt.date} – ${commitExt.authors.join(", ")}`;
+    label.textContent = commitExt.label;
     hints.innerHTML = "";
-    for (const hint of commitExt.commit.hints) {
+    for (const hint of commitExt.hints) {
         const li = document.createElement("li");
         li.append(hint);
         hints.append(li);
@@ -62,7 +62,7 @@ ws.addEventListener("message", event => {
     noAnswers.hidden = commitExt.rendered_highfive_answers != null;
     answers.innerHTML = commitExt.rendered_highfive_answers;
     content.innerHTML = commitExt.rendered_body;
-    input.value = commitExt.commit.label;
+    input.value = commitExt.label;
 
     // linkify any text that looks like a qualified issue reference. to avoid
     // false positives, only consider direct descendant text nodes of <p>.
@@ -440,14 +440,14 @@ selectCommit.addEventListener("change", event => {
 });
 function selectCommitChanged() {
     if (selectCommit.checked) {
-        selectedCommits.add(commitExt.commit.hash_number);
+        selectedCommits.add(commitExt.hash_number);
     } else {
-        selectedCommits.delete(commitExt.commit.hash_number);
+        selectedCommits.delete(commitExt.hash_number);
     }
     updateThingsThatDependOnSelectedCommits();
 }
 function updateSelectCommit() {
-    selectCommit.checked = selectedCommits.has(commitExt.commit.hash_number);
+    selectCommit.checked = selectedCommits.has(commitExt.hash_number);
 }
 function updateThingsThatDependOnSelectedCommits() {
     acceptButton.disabled = (selectedCommits.size > 0);
@@ -468,7 +468,7 @@ export function getSelectedCommits() {
     if (commitSelectionIsActive()) {
         return [...selectedCommits].map(number => getCommit(number));
     } else {
-        return [commitExt.commit];
+        return [commitExt];
     }
 }
 export function commitSelectionIsActive() {

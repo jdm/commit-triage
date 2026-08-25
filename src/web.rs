@@ -195,7 +195,9 @@ pub enum Action {
 
 #[derive(Serialize)]
 struct Response {
+    #[serde(flatten)]
     commit: Commit,
+
     rendered_body: String,
     git_show: String,
     rendered_highfive_answers: Option<String>,

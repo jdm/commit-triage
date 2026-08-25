@@ -20,7 +20,7 @@ export function openSearchDialog() {
 }
 export function traverseSearchResults(delta, filtered = true) {
     const whichCommits = filtered ? filteredCommits : commits;
-    const oldIndex = whichCommits.map(commit => commit.hash_number).indexOf(commitExt.commit.hash_number);
+    const oldIndex = whichCommits.map(commit => commit.hash_number).indexOf(commitExt.hash_number);
     const newIndex = oldIndex >= 0 ? (oldIndex + delta + whichCommits.length) % whichCommits.length : 0;
     goToCommit(whichCommits[newIndex].hash_number.slice(1));
 }

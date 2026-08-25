@@ -150,12 +150,6 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
                                 info!(?state, ?commits, "setting state in bulk");
                                 ACTION.0.send(Action::SetState(commits, state)).await.unwrap();
                             },
-                            Request::Reload => {
-                                info!("reload requested");
-                                // send the current content
-                                let content = CONTENT.read().unwrap().to_owned();
-                                ws.send(content.into()).await?;
-                            },
                         }
                     },
                 };
@@ -217,6 +211,4 @@ enum Request {
     SetLabel(Vec<Commit>, String),
     /// see [`Action::SetState`].
     SetState(Vec<Commit>, State),
-
-    Reload,
 }

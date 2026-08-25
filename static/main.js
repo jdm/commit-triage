@@ -1,10 +1,10 @@
 import { debouncedUpdateGitShow } from "./git-show.js";
-import { commitExt, setCommitExt } from "./commit-registry.js";
+import { commits, setCommits, commitExt, setCommitExt, fetchCommits } from "./commit-registry.js";
 import { dialogs } from "./dialog-registry.js";
 import { openEditorDialog } from "./editor-dialog.js";
 import { openWordCloudDialog } from "./word-cloud-dialog.js";
 import { openGotoDialog } from "./goto-dialog.js";
-import { commits, filteredCommits, openSearchDialog, traverseSearchResults } from "./search-dialog.js";
+import { filteredCommits, openSearchDialog, traverseSearchResults } from "./search-dialog.js";
 
 // used by event handler attributes in index.html
 window.doAccept = doAccept;
@@ -109,6 +109,15 @@ const selectedCommits = new Set;
 ws.addEventListener("message", event => {
     console.log(event.data);
     // TODO: remove? use for change notifications?
+});
+addEventListener("load", async event => {
+    console.log(event);
+    await fetchCommits();
+    if (filteredCommits.length > 0) {
+        goToCommit(filteredCommits[0].hash_number.slice(1));
+    } else {
+        goToCommit(commits[0].hash_number.slice(1));
+    }
 });
 addEventListener("keydown", event => {
     console.log(event);
@@ -223,7 +232,6 @@ addEventListener("wheel", event => {
         }
     }
 }, {passive: false});
-openSearchDialog();
 
 function doAccept() {
     if (!confirmBulkAction(n => `mark ${n} commits Accepted?`)) {

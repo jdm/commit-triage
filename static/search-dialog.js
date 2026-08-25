@@ -1,5 +1,5 @@
 import { goToCommit } from "./main.js";
-import { commitExt } from "./commit-registry.js";
+import { commits, commitExt, fetchCommits } from "./commit-registry.js";
 import { dialogs } from "./dialog-registry.js";
 dialogs.push(searchDialog);
 
@@ -7,7 +7,6 @@ dialogs.push(searchDialog);
 window.updateSearch = updateSearch;
 window.renderSearchDialog = renderSearchDialog;
 
-export let commits = null;
 export let filteredCommits = null;
 let searchFirstTime = true;
 
@@ -15,7 +14,7 @@ export function openSearchDialog() {
     searchDialog.showModal();
     if (searchFirstTime) {
         searchFirstTime = false;
-        updateSearch();
+        renderSearchDialog();
     }
 }
 export function traverseSearchResults(delta, filtered = true) {
@@ -25,12 +24,10 @@ export function traverseSearchResults(delta, filtered = true) {
     goToCommit(whichCommits[newIndex].hash_number.slice(1));
 }
 async function updateSearch() {
-    const response = await fetch("/commits");
-    commits = await response.json();
-    console.log(commits);
+    await fetchCommits();
     renderSearchDialog();
 }
-function renderSearchDialog() {
+export function renderSearchDialog() {
     const filterFn = searchFilter.value.length > 0
         ? eval(`(commit, text, textLower, hints) => ${searchFilter.value}`)
         : () => true;

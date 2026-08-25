@@ -3,6 +3,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::{ARGS, web::safe_render_markdown};
+
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub enum State {
     #[default]
@@ -13,7 +15,7 @@ pub enum State {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
-pub struct Commit {
+struct CommitRecord {
     pub index_in_file: usize,
     pub url: String,
     pub authors: Vec<String>,
@@ -28,12 +30,6 @@ pub struct Commit {
 }
 
 impl Commit {
-    pub fn number(&self) -> &str {
-        self.hash_number
-            .strip_prefix("#")
-            .expect("guaranteed by format")
-    }
-
     pub fn tags(&self) -> &str {
         if let Some((tags, _notes)) = self.label.split_once(";") {
             return tags;
@@ -111,14 +107,19 @@ pub fn write_to_file(
     Ok(())
 }
 
-pub fn parse_from_file(path: &Path) -> Result<Vec<Commit>, ()> {
-    let contents = std::fs::read_to_string(path).map_err(|_| ())?;
-    Ok(parse_from_str(&contents))
+pub fn load_commits_from_file(path: &Path) -> Result<Vec<Commit>, ()> {
+    let records = parse_records_from_file(path)?;
+    Ok(records.into_iter().map(Commit::from).collect())
 }
 
-fn parse_from_str(contents: &str) -> Vec<Commit> {
+fn parse_records_from_file(path: &Path) -> Result<Vec<CommitRecord>, ()> {
+    let contents = std::fs::read_to_string(path).map_err(|_| ())?;
+    Ok(parse_records_from_str(&contents))
+}
+
+fn parse_records_from_str(contents: &str) -> Vec<CommitRecord> {
     let mut commits = vec![];
-    let mut commit = Commit::default();
+    let mut commit = CommitRecord::default();
     let mut started_first_commit = false;
     let mut current_date = String::new();
     let mut has_bad_input = false;
@@ -147,7 +148,7 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
             }
             if line.starts_with("https://") || line.starts_with(state_prefixes) {
                 commits.push(commit);
-                commit = Commit::default();
+                commit = CommitRecord::default();
                 commit.index_in_file = commits.len();
             } else {
                 eprintln!("bad input on line {line_number}: {line:?}");
@@ -200,6 +201,63 @@ fn parse_from_str(contents: &str) -> Vec<Commit> {
     commits
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Commit {
+    pub index_in_file: usize,
+    pub url: String,
+    pub authors: Vec<String>,
+    pub hash_number: String,
+    pub title: String,
+    pub hash: String,
+    pub hints: Vec<String>,
+    pub body: Vec<String>,
+    pub date: String,
+    pub state: State,
+    pub label: String,
+
+    pub rendered_body: String,
+    pub git_show: String,
+    pub rendered_highfive_answers: Option<String>,
+}
+
+impl From<CommitRecord> for Commit {
+    fn from(commit: CommitRecord) -> Self {
+        let rendered_body = safe_render_markdown(&commit.body.join("\n"));
+        let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
+            std::fs::read_to_string(path.join(&commit.hash)).unwrap_or_else(|_| "".to_owned())
+        } else {
+            "[enable `git show` output with --git-show-cache-path]".to_owned()
+        };
+        let highfive_answers = if let Some(path) = ARGS.highfive_answers_path.as_ref() {
+            let number = commit
+                .hash_number
+                .strip_prefix("#")
+                .expect("guaranteed by format");
+            std::fs::read_to_string(path.join(number)).ok()
+        } else {
+            Some("[enable Highfive answers with --highfive-answers-path]".to_owned())
+        };
+        Commit {
+            index_in_file: commit.index_in_file,
+            url: commit.url,
+            authors: commit.authors,
+            hash_number: commit.hash_number,
+            title: commit.title,
+            hash: commit.hash,
+            hints: commit.hints,
+            body: commit.body,
+            date: commit.date,
+            state: commit.state,
+            label: commit.label,
+
+            rendered_body,
+            git_show,
+            rendered_highfive_answers: highfive_answers
+                .map(|answers| safe_render_markdown(&answers)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -224,9 +282,9 @@ mod test {
     # use non-ipc things for the data.
     # Signed-off-by: Narfinger
     # Testing: This changes types and does not need testing."#;
-        let commits = parse_from_str(contents);
+        let commits = parse_records_from_str(contents);
         let expected = vec![
-            Commit {
+            CommitRecord {
                 index_in_file: 0,
                 url: "https://github.com/servo/servo/pull/41604".to_owned(),
                 authors: vec!["@kkoyung".to_owned()],
@@ -246,7 +304,7 @@ mod test {
                 label: "dom; web crypto".to_owned(),
                 state: State::Accepted,
             },
-            Commit {
+            CommitRecord {
                 index_in_file: 1,
                 url: "https://github.com/servo/servo/pull/41198".to_owned(),
                 authors: vec!["@Narfinger".to_owned()],
@@ -294,6 +352,6 @@ warning: exhaustive rename detection was skipped due to too many files.
 warning: you may want to set your diff.renameLimit variable to at least 53941 and retry the command.
     # Automated downstream sync of changes from upstream as of 19-04-2026
     # [no-wpt-sync]"#;
-        parse_from_str(contents);
+        parse_records_from_str(contents);
     }
 }

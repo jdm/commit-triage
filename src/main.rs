@@ -25,7 +25,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::analysis::compute_word_cloud;
-use crate::commit::{Commit, State, parse_from_file, write_to_file};
+use crate::commit::{Commit, State, load_commits_from_file, write_to_file};
 use crate::web::Action;
 
 mod analysis;
@@ -104,7 +104,7 @@ async fn main() {
         .init();
 
     let args = &ARGS;
-    let mut commits = parse_from_file(&args.commits_txt_path).unwrap();
+    let mut commits = load_commits_from_file(&args.commits_txt_path).unwrap();
     if args.sort_by_author {
         commits.sort_by(|p, q| p.authors.cmp(&q.authors));
     }
@@ -115,7 +115,7 @@ async fn main() {
         commits.sort_by(|p, q| p.tags().cmp(q.tags()));
     }
     if let Some(other_commits_txt_path) = args.update_commit_data.as_ref() {
-        let other_commits = parse_from_file(other_commits_txt_path).unwrap();
+        let other_commits = load_commits_from_file(other_commits_txt_path).unwrap();
         write_to_file(&commits, &args.commits_txt_path, Some(&other_commits)).unwrap();
         return;
     }

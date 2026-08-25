@@ -13,7 +13,7 @@ use rocket::{
     },
 };
 use rocket_ws::Message;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tracing::{error, info};
 
 use crate::{
@@ -29,7 +29,7 @@ pub static SHUTDOWN: OnceLock<rocket::Shutdown> = OnceLock::new();
 /// contains a receiver to avoid SendError when there are no clients (`UPDATE.1`),
 /// but you can’t call `recv` on it directly. instead create your own receiver
 /// with `UPDATE.0.subscribe()` or `UPDATE.1.resubscribe()`.
-static UPDATE: LazyLock<(broadcast::Sender<CommitExt>, broadcast::Receiver<CommitExt>)> =
+static UPDATE: LazyLock<(broadcast::Sender<Commit>, broadcast::Receiver<Commit>)> =
     LazyLock::new(|| broadcast::channel(1));
 
 pub static ACTION: LazyLock<(mpsc::Sender<Action>, Mutex<mpsc::Receiver<Action>>)> =
@@ -65,35 +65,12 @@ pub fn shutdown() {
     crate::web::SHUTDOWN.get().unwrap().clone().notify();
 }
 
-impl From<Commit> for CommitExt {
-    fn from(commit: Commit) -> Self {
-        let rendered_body = safe_render_markdown(&commit.body.join("\n"));
-        let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
-            std::fs::read_to_string(path.join(&commit.hash)).unwrap_or_else(|_| "".to_owned())
-        } else {
-            "[enable `git show` output with --git-show-cache-path]".to_owned()
-        };
-        let highfive_answers = if let Some(path) = ARGS.highfive_answers_path.as_ref() {
-            std::fs::read_to_string(path.join(commit.number())).ok()
-        } else {
-            Some("[enable Highfive answers with --highfive-answers-path]".to_owned())
-        };
-        CommitExt {
-            commit,
-            rendered_body,
-            git_show,
-            rendered_highfive_answers: highfive_answers
-                .map(|answers| safe_render_markdown(&answers)),
-        }
-    }
-}
-
 pub fn update(commit: &Commit) {
-    UPDATE.0.send(CommitExt::from(commit.clone())).unwrap();
+    UPDATE.0.send(commit.clone()).unwrap();
 }
 
 #[allow(clippy::let_and_return)]
-fn safe_render_markdown(unsafe_markdown: &str) -> String {
+pub fn safe_render_markdown(unsafe_markdown: &str) -> String {
     let mut options = comrak::Options::default();
     options.extension.autolink = true;
     options.extension.table = true;
@@ -149,16 +126,11 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
 }
 
 #[get("/commits")]
-async fn commits() -> Json<Vec<CommitExt>> {
+async fn commits() -> Json<Vec<Commit>> {
     info!("commits requested");
     let (tx, rx) = oneshot::channel();
     ACTION.0.send(Action::GetCommits(tx)).await.unwrap();
-    rx.await
-        .unwrap()
-        .into_iter()
-        .map(CommitExt::from)
-        .collect::<Vec<_>>()
-        .into()
+    rx.await.unwrap().into()
 }
 
 #[get("/wordCloud")]
@@ -183,16 +155,6 @@ pub enum Action {
 
     GetCommits(oneshot::Sender<Vec<Commit>>),
     GetWordCloud(oneshot::Sender<Result<WordCloud, &'static str>>),
-}
-
-#[derive(Clone, Debug, Serialize)]
-struct CommitExt {
-    #[serde(flatten)]
-    commit: Commit,
-
-    rendered_body: String,
-    git_show: String,
-    rendered_highfive_answers: Option<String>,
 }
 
 #[derive(Deserialize)]

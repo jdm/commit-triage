@@ -90,6 +90,7 @@ pub fn update(commit: &Commit) {
     UPDATE.0.send(()).unwrap();
 }
 
+#[allow(clippy::let_and_return)]
 fn safe_render_markdown(unsafe_markdown: &str) -> String {
     let mut options = comrak::Options::default();
     options.extension.autolink = true;

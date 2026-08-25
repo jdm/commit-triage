@@ -29,7 +29,9 @@ pub struct Commit {
 
 impl Commit {
     pub fn number(&self) -> &str {
-        self.hash_number.strip_prefix("#").expect("guaranteed by format")
+        self.hash_number
+            .strip_prefix("#")
+            .expect("guaranteed by format")
     }
 
     pub fn tags(&self) -> &str {

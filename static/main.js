@@ -12,6 +12,7 @@ window.doIgnore = doIgnore;
 window.doDone = doDone;
 window.doUntriage = doUntriage;
 window.doLabel = doLabel;
+window.doOpen = doOpen;
 window.doSelect = doSelect;
 window.doSelectAll = doSelectAll;
 window.doReselect = doReselect;
@@ -167,6 +168,9 @@ addEventListener("keypress", event => {
     case "t":
         doLabel();
         break;
+    case "o":
+        doOpen();
+        break;
     case " ":
         // if a checkbox or button is already focused,
         // let the browser toggle the checkbox or click the button as usual.
@@ -261,6 +265,21 @@ function doUntriage() {
 }
 function doLabel() {
     openEditorDialog();
+}
+function doOpen() {
+    if (!confirmBulkAction(n => `open review pages for ${n} commits (in new tabs)?`)) {
+        return;
+    }
+    const selectedCommits = getSelectedCommits();
+    for (const commit of selectedCommits) {
+        if (commitSelectionIsActive()) {
+            window.open(commit.url, "");
+        } else {
+            // like `_blank`, but opens in the same tab every time, so you can keep
+            // this tool and the review pages in two separate windows.
+            window.open(commit.url, "anotherWindow");
+        }
+    }
 }
 function doSelect() {
     selectCommit.checked = !selectCommit.checked;

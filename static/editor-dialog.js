@@ -1,10 +1,10 @@
-import { sendMessageToServer, getSelectedCommits, confirmBulkAction } from "./main.js";
+import { sendMessageToServer, renderAll, getSelectedCommits, confirmBulkAction } from "./main.js";
 import { dialogs } from "./dialog-registry.js";
 dialogs.push(editorDialog);
 
 editorDialog.addEventListener("close", event => {
     console.log(event);
-    sendMessageToServer({"Reload": null});
+    renderAll();
 });
 editorForm.addEventListener("submit", event => {
     console.log(event);

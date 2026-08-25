@@ -39,6 +39,9 @@ export function sendMessageToServer(message) {
 }
 export function goToCommit(hash_number) {
     setCommitExt(getCommit(hash_number));
+    renderAll();
+}
+export function renderAll() {
     updateSelectCommit();
     updateThingsThatDependOnSelectedCommits();
     title.className = commitExt.state;
@@ -489,7 +492,7 @@ export function confirmBulkAction(messageFn) {
 
 softHyphens.addEventListener("change", event => {
     console.log(event);
-    sendMessageToServer({"Reload": null});
+    renderAll();
 }, true);
 document.addEventListener("selectionchange", event => {
     console.log(event);

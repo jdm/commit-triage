@@ -1,11 +1,11 @@
-import { sendMessageToServer, goToCommit } from "./main.js";
+import { renderAll, goToCommit } from "./main.js";
 import { commitExt } from "./commit-registry.js";
 import { dialogs } from "./dialog-registry.js";
 dialogs.push(gotoDialog);
 
 gotoDialog.addEventListener("close", event => {
     console.log(event);
-    sendMessageToServer({"Reload": null});
+    renderAll();
 });
 gotoForm.addEventListener("submit", event => {
     console.log(event);

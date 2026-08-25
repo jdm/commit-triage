@@ -69,23 +69,31 @@ pub fn shutdown() {
     crate::web::SHUTDOWN.get().unwrap().clone().notify();
 }
 
+impl From<Commit> for Response {
+    fn from(commit: Commit) -> Self {
+        let rendered_body = safe_render_markdown(&commit.body.join("\n"));
+        let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
+            std::fs::read_to_string(path.join(&commit.hash)).unwrap_or_else(|_| "".to_owned())
+        } else {
+            "[enable `git show` output with --git-show-cache-path]".to_owned()
+        };
+        let highfive_answers = if let Some(path) = ARGS.highfive_answers_path.as_ref() {
+            std::fs::read_to_string(path.join(commit.number())).ok()
+        } else {
+            Some("[enable Highfive answers with --highfive-answers-path]".to_owned())
+        };
+        Response {
+            commit,
+            rendered_body,
+            git_show,
+            rendered_highfive_answers: highfive_answers
+                .map(|answers| safe_render_markdown(&answers)),
+        }
+    }
+}
+
 pub fn update(commit: &Commit) {
-    let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
-        std::fs::read_to_string(path.join(&commit.hash)).unwrap_or_else(|_| "".to_owned())
-    } else {
-        "[enable `git show` output with --git-show-cache-path]".to_owned()
-    };
-    let highfive_answers = if let Some(path) = ARGS.highfive_answers_path.as_ref() {
-        std::fs::read_to_string(path.join(commit.number())).ok()
-    } else {
-        Some("[enable Highfive answers with --highfive-answers-path]".to_owned())
-    };
-    let content = Response {
-        commit: commit.clone(),
-        rendered_body: safe_render_markdown(&commit.body.join("\n")),
-        git_show,
-        rendered_highfive_answers: highfive_answers.map(|answers| safe_render_markdown(&answers)),
-    };
+    let content = Response::from(commit.clone());
     *CONTENT.write().unwrap() = serde_json::to_string(&content).unwrap();
     UPDATE.0.send(()).unwrap();
 }
@@ -161,11 +169,16 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
 }
 
 #[get("/commits")]
-async fn commits() -> Json<Vec<Commit>> {
+async fn commits() -> Json<Vec<Response>> {
     info!("commits requested");
     let (tx, rx) = oneshot::channel();
     ACTION.0.send(Action::GetCommits(tx)).await.unwrap();
-    rx.await.unwrap().into()
+    rx.await
+        .unwrap()
+        .into_iter()
+        .map(Response::from)
+        .collect::<Vec<_>>()
+        .into()
 }
 
 #[get("/wordCloud")]

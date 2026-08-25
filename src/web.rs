@@ -133,10 +133,6 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
                         };
                         let request: Request = serde_json::from_str(&request).unwrap();
                         match request {
-                            Request::Keypress(key) => {
-                                info!(?key, "key pressed");
-                                ACTION.0.send(Action::Keypress(key)).await.unwrap();
-                            },
                             Request::SetLabel(commits, label) => {
                                 info!(?label, ?commits, "setting label");
                                 ACTION.0.send(Action::SetLabel(commits, label)).await.unwrap();
@@ -180,7 +176,6 @@ async fn word_cloud() -> Json<Result<WordCloud, &'static str>> {
 }
 
 pub enum Action {
-    Keypress(String),
     /// set the [`State`] of the each given [`Commit`].
     ///
     /// each `Commit` is looked up internally using its `hash_number`;
@@ -207,7 +202,6 @@ struct Response {
 
 #[derive(Deserialize)]
 enum Request {
-    Keypress(String),
     /// see [`Action::SetLabel`].
     SetLabel(Vec<Commit>, String),
     /// see [`Action::SetState`].

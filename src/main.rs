@@ -184,15 +184,6 @@ impl App {
                 },
                 Some(action) = web_actions.recv() => {
                     match action {
-                        Action::Keypress(keys) => {
-                            for key in keys.chars() {
-                                let mut key_event = KeyEvent::new(KeyCode::Char(key), KeyModifiers::empty());
-                                if key.is_ascii_uppercase() {
-                                    key_event.modifiers = KeyModifiers::SHIFT;
-                                }
-                                self.handle_key_event(key_event, true);
-                            }
-                        },
                         Action::SetLabel(commits, label) => {
                             for commit in commits {
                                 if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
@@ -247,13 +238,13 @@ impl App {
                 {
                     terminal.clear().unwrap();
                 }
-                self.handle_key_event(key_event, false)
+                self.handle_key_event(key_event)
             }
             _ => {}
         }
     }
 
-    fn handle_key_event(&mut self, key_event: KeyEvent, for_web: bool) {
+    fn handle_key_event(&mut self, key_event: KeyEvent) {
         if !self.edit_tag {
             let has_shift = key_event.modifiers.contains(KeyModifiers::SHIFT);
             match key_event.code {
@@ -261,9 +252,9 @@ impl App {
                 KeyCode::Char('j') | KeyCode::Char('J') => self.next_index(has_shift),
                 KeyCode::Char('k') | KeyCode::Char('K') => self.prev_index(has_shift),
                 KeyCode::Char('o') => self.open_url(),
-                KeyCode::Char('+') => self.update_state(State::Accepted, for_web),
-                KeyCode::Char('-') => self.update_state(State::Ignored, for_web),
-                KeyCode::Char('.') => self.update_state(State::Done, for_web),
+                KeyCode::Char('+') => self.update_state(State::Accepted),
+                KeyCode::Char('-') => self.update_state(State::Ignored),
+                KeyCode::Char('.') => self.update_state(State::Done),
                 KeyCode::Char(' ') => self.unroll = !self.unroll,
                 KeyCode::Char('t') => self.open_tag_editor(),
                 _ => {}
@@ -415,11 +406,9 @@ impl App {
         crate::web::update(&self.commits[self.index]);
     }
 
-    fn update_state(&mut self, state: State, for_web: bool) {
+    fn update_state(&mut self, state: State) {
         self.commits[self.index].state = state;
-        if !for_web {
-            self.next_index(true);
-        }
+        self.next_index(true);
         write_to_file(&self.commits, &self.path, None).unwrap();
     }
 

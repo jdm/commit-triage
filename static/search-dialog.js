@@ -49,7 +49,7 @@ export function renderSearchDialog() {
             searchDialog.close();
         });
         a.textContent = commit.hash_number;
-        a.href = `#`;
+        a.href = commit.hash_number;
         pre.append(a, ` - ${titleWithAbbreviatedHints(commit)}\n`);
     }
 

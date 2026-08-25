@@ -9,6 +9,7 @@ export function setCommits(newCommits) {
 
 export function setCommitExt(newCommitExt) {
     commitExt = newCommitExt;
+    history.replaceState(null, "", newCommitExt.hash_number);
 }
 
 export function replaceCommit(newCommitExt) {

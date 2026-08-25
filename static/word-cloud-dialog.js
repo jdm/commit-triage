@@ -38,7 +38,7 @@ async function updateWordCloud() {
                     wordCloudDialog.close();
                 });
                 a.textContent = entry.hash_number;
-                a.href = `#`;
+                a.href = entry.hash_number;
                 pre.append(a, ` - ${entry.title}\n`);
             }
             pre.append(`\n`);

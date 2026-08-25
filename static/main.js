@@ -122,11 +122,19 @@ ws.addEventListener("message", event => {
 addEventListener("load", async event => {
     console.log(event);
     await fetchCommits();
-    if (filteredCommits.length > 0) {
+    if (getCommit(location.hash) != null) {
+        goToCommit(location.hash);
+    } else if (filteredCommits.length > 0) {
+        history.replaceState(null, "", filteredCommits[0].hash_number);
         goToCommit(filteredCommits[0].hash_number);
     } else {
+        history.replaceState(null, "", commits[0].hash_number);
         goToCommit(commits[0].hash_number);
     }
+});
+addEventListener("hashchange", event => {
+    console.log(event, location.hash);
+    goToCommit(location.hash);
 });
 addEventListener("keydown", event => {
     console.log(event);

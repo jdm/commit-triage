@@ -150,10 +150,6 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
                                 info!(?state, ?commits, "setting state in bulk");
                                 ACTION.0.send(Action::SetState(commits, state)).await.unwrap();
                             },
-                            Request::GoToCommit(number) => {
-                                info!(?number, "go to commit requested");
-                                ACTION.0.send(Action::GoToCommit(number)).await.unwrap();
-                            },
                             Request::Reload => {
                                 info!("reload requested");
                                 // send the current content
@@ -200,7 +196,6 @@ pub enum Action {
     /// each `Commit` is looked up internally using its `hash_number`;
     /// all other fields are ignored.
     SetState(Vec<Commit>, State),
-    GoToCommit(String),
 
     GetCommits(oneshot::Sender<Vec<Commit>>),
     GetWordCloud(oneshot::Sender<Result<WordCloud, &'static str>>),
@@ -222,7 +217,6 @@ enum Request {
     SetLabel(Vec<Commit>, String),
     /// see [`Action::SetState`].
     SetState(Vec<Commit>, State),
-    GoToCommit(String),
 
     Reload,
 }

@@ -1,7 +1,7 @@
 pub static ARGS: LazyLock<Args> = LazyLock::new(Args::parse);
 
 //use ratatui::{DefaultTerminal, Frame};
-use std::cell::Cell;
+use std::cell::{Cell, OnceCell};
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
@@ -175,6 +175,7 @@ impl App {
 
         let mut terminal_events = EventStream::new();
         let mut web_actions = crate::web::ACTION.1.lock().await;
+        let mut cached_commits: OnceCell<String> = OnceCell::new();
         while !self.exit {
             terminal.draw(|frame| self.draw(frame))?;
             tokio::select! {
@@ -186,6 +187,7 @@ impl App {
                         Action::SetLabel(commits, label) => {
                             for commit in commits {
                                 if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
+                                    cached_commits = OnceCell::new();
                                     commit.label = label.clone();
                                     crate::web::update(commit);
                                 }
@@ -195,6 +197,7 @@ impl App {
                         Action::SetState(commits, state) => {
                             for commit in commits {
                                 if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
+                                    cached_commits = OnceCell::new();
                                     commit.state = state;
                                     crate::web::update(commit);
                                 }
@@ -202,7 +205,8 @@ impl App {
                             write_to_file(&self.commits, &self.path, None).unwrap();
                         },
                         Action::GetCommits(tx) => {
-                            tx.send(self.commits.clone()).unwrap();
+                            let result = cached_commits.get_or_init(|| serde_json::to_string(&self.commits).expect("failed to convert to JSON"));
+                            tx.send(result.clone()).unwrap();
                         },
                         Action::GetWordCloud(tx) => {
                             tx.send(compute_word_cloud(&self.commits)).unwrap();

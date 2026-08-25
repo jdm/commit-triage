@@ -5,7 +5,9 @@ use rocket::{
     Config,
     fs::FileServer,
     futures::{SinkExt, StreamExt},
-    get, routes,
+    get,
+    response::content::RawJson,
+    routes,
     serde::json::Json,
     tokio::{
         self,
@@ -126,11 +128,11 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
 }
 
 #[get("/commits")]
-async fn commits() -> Json<Vec<Commit>> {
+async fn commits() -> RawJson<String> {
     info!("commits requested");
     let (tx, rx) = oneshot::channel();
     ACTION.0.send(Action::GetCommits(tx)).await.unwrap();
-    rx.await.unwrap().into()
+    RawJson(rx.await.unwrap())
 }
 
 #[get("/wordCloud")]
@@ -153,7 +155,7 @@ pub enum Action {
     /// all other fields are ignored.
     SetState(Vec<Commit>, State),
 
-    GetCommits(oneshot::Sender<Vec<Commit>>),
+    GetCommits(oneshot::Sender<String>),
     GetWordCloud(oneshot::Sender<Result<WordCloud, &'static str>>),
 }
 

@@ -34,7 +34,7 @@ async function updateWordCloud() {
                 const a = document.createElement("a");
                 a.addEventListener("click", event => {
                     event.preventDefault();
-                    goToCommit(entry.hash_number.slice(1));
+                    goToCommit(entry.hash_number);
                     wordCloudDialog.close();
                 });
                 a.textContent = entry.hash_number;

@@ -37,8 +37,8 @@ window.markCommitsDone = markCommitsDone;
 export function sendMessageToServer(message) {
     ws.send(JSON.stringify(message));
 }
-export function goToCommit(number) {
-    setCommitExt(getCommit(`#${number}`));
+export function goToCommit(hash_number) {
+    setCommitExt(getCommit(hash_number));
     updateSelectCommit();
     updateThingsThatDependOnSelectedCommits();
     title.className = commitExt.state;
@@ -114,9 +114,9 @@ addEventListener("load", async event => {
     console.log(event);
     await fetchCommits();
     if (filteredCommits.length > 0) {
-        goToCommit(filteredCommits[0].hash_number.slice(1));
+        goToCommit(filteredCommits[0].hash_number);
     } else {
-        goToCommit(commits[0].hash_number.slice(1));
+        goToCommit(commits[0].hash_number);
     }
 });
 addEventListener("keydown", event => {

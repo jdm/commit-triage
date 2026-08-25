@@ -21,7 +21,7 @@ export function traverseSearchResults(delta, filtered = true) {
     const whichCommits = filtered ? filteredCommits : commits;
     const oldIndex = whichCommits.map(commit => commit.hash_number).indexOf(commitExt.hash_number);
     const newIndex = oldIndex >= 0 ? (oldIndex + delta + whichCommits.length) % whichCommits.length : 0;
-    goToCommit(whichCommits[newIndex].hash_number.slice(1));
+    goToCommit(whichCommits[newIndex].hash_number);
 }
 async function updateSearch() {
     await fetchCommits();
@@ -45,7 +45,7 @@ export function renderSearchDialog() {
         const a = document.createElement("a");
         a.addEventListener("click", event => {
             event.preventDefault();
-            goToCommit(commit.hash_number.slice(1));
+            goToCommit(commit.hash_number);
             searchDialog.close();
         });
         a.textContent = commit.hash_number;

@@ -9,7 +9,7 @@ gotoDialog.addEventListener("close", event => {
 });
 gotoForm.addEventListener("submit", event => {
     console.log(event);
-    goToCommit(gotoInput.value);
+    goToCommit(`#${gotoInput.value}`);
 });
 
 export function openGotoDialog() {

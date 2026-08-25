@@ -38,14 +38,7 @@ export function sendMessageToServer(message) {
     ws.send(JSON.stringify(message));
 }
 export function goToCommit(number) {
-    sendMessageToServer({"GoToCommit": number});
-}
-
-const ws = new WebSocket("/ws");
-const selectedCommits = new Set;
-ws.addEventListener("message", event => {
-    console.log(event.data);
-    setCommitExt(JSON.parse(event.data));
+    setCommitExt(getCommit(`#${number}`));
     updateSelectCommit();
     updateThingsThatDependOnSelectedCommits();
     title.className = commitExt.state;
@@ -109,6 +102,13 @@ ws.addEventListener("message", event => {
     softHyphenify([title, label, ...content.querySelectorAll("p, code")]);
 
     debouncedUpdateGitShow(commitExt.git_show);
+}
+
+const ws = new WebSocket("/ws");
+const selectedCommits = new Set;
+ws.addEventListener("message", event => {
+    console.log(event.data);
+    // TODO: remove? use for change notifications?
 });
 addEventListener("keydown", event => {
     console.log(event);

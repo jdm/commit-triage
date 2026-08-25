@@ -18,10 +18,11 @@ export function openSearchDialog() {
         updateSearch();
     }
 }
-export function traverseSearchResults(delta) {
-    const oldIndex = filteredCommits.map(commit => commit.hash_number).indexOf(commitExt.commit.hash_number);
-    const newIndex = oldIndex >= 0 ? (oldIndex + delta + filteredCommits.length) % filteredCommits.length : 0;
-    goToCommit(filteredCommits[newIndex].hash_number.slice(1));
+export function traverseSearchResults(delta, filtered = true) {
+    const whichCommits = filtered ? filteredCommits : commits;
+    const oldIndex = whichCommits.map(commit => commit.hash_number).indexOf(commitExt.commit.hash_number);
+    const newIndex = oldIndex >= 0 ? (oldIndex + delta + whichCommits.length) % whichCommits.length : 0;
+    goToCommit(whichCommits[newIndex].hash_number.slice(1));
 }
 async function updateSearch() {
     const response = await fetch("/commits");

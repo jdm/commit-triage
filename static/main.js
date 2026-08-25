@@ -204,8 +204,6 @@ addEventListener("keypress", event => {
     case "K":
         doPrevious();
         break;
-    default:
-        sendMessageToServer({"Keypress": event.key});
     }
 });
 // when you Shift+scroll, step through commits.
@@ -309,10 +307,10 @@ function doGoToCommit() {
     openGotoDialog();
 }
 function doNext() {
-    sendMessageToServer({"Keypress": "j"});
+    traverseSearchResults(+1, /* filtered */ false);
 }
 function doPrevious() {
-    sendMessageToServer({"Keypress": "k"});
+    traverseSearchResults(-1, /* filtered */ false);
 }
 function doSearch() {
     openSearchDialog();

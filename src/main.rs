@@ -172,7 +172,6 @@ impl App {
         {
             self.index = index;
         }
-        crate::web::update(&self.commits[self.index]);
 
         let mut terminal_events = EventStream::new();
         let mut web_actions = crate::web::ACTION.1.lock().await;

@@ -1,4 +1,4 @@
-use std::sync::{LazyLock, OnceLock, RwLock};
+use std::sync::{LazyLock, OnceLock};
 
 use comrak::markdown_to_html;
 use rocket::{
@@ -26,15 +26,11 @@ pub static SHUTDOWN: OnceLock<rocket::Shutdown> = OnceLock::new();
 
 /// channel for notifying web clients that a content update is available.
 ///
-/// uses a tokio broadcast channel as a kind of async [`std::sync::Condvar`].
 /// contains a receiver to avoid SendError when there are no clients (`UPDATE.1`),
 /// but you can’t call `recv` on it directly. instead create your own receiver
 /// with `UPDATE.0.subscribe()` or `UPDATE.1.resubscribe()`.
-///
-/// the content itself is stored separately, so we can send it on page load.
-pub static UPDATE: LazyLock<(broadcast::Sender<()>, broadcast::Receiver<()>)> =
+static UPDATE: LazyLock<(broadcast::Sender<CommitExt>, broadcast::Receiver<CommitExt>)> =
     LazyLock::new(|| broadcast::channel(1));
-pub static CONTENT: RwLock<String> = RwLock::new(String::new());
 
 pub static ACTION: LazyLock<(mpsc::Sender<Action>, Mutex<mpsc::Receiver<Action>>)> =
     LazyLock::new(|| {
@@ -69,7 +65,7 @@ pub fn shutdown() {
     crate::web::SHUTDOWN.get().unwrap().clone().notify();
 }
 
-impl From<Commit> for Response {
+impl From<Commit> for CommitExt {
     fn from(commit: Commit) -> Self {
         let rendered_body = safe_render_markdown(&commit.body.join("\n"));
         let git_show = if let Some(path) = ARGS.git_show_output_cache_path.as_ref() {
@@ -82,7 +78,7 @@ impl From<Commit> for Response {
         } else {
             Some("[enable Highfive answers with --highfive-answers-path]".to_owned())
         };
-        Response {
+        CommitExt {
             commit,
             rendered_body,
             git_show,
@@ -93,9 +89,7 @@ impl From<Commit> for Response {
 }
 
 pub fn update(commit: &Commit) {
-    let content = Response::from(commit.clone());
-    *CONTENT.write().unwrap() = serde_json::to_string(&content).unwrap();
-    UPDATE.0.send(()).unwrap();
+    UPDATE.0.send(CommitExt::from(commit.clone())).unwrap();
 }
 
 #[allow(clippy::let_and_return)]
@@ -116,22 +110,18 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
     let mut update = UPDATE.1.resubscribe();
     ws.channel(move |mut ws| {
         Box::pin(async move {
-            // send the current content
-            let content = CONTENT.read().unwrap().to_owned();
-            ws.send(content.into()).await?;
-
             loop {
                 tokio::select! {
-                    // the content has changed
+                    // we’ve updated a commit
                     update = update.recv() => {
-                        let Ok(()) = update else {
+                        let Ok(update) = update else {
                             error!(?update);
                             continue;
                         };
-                        info!("content changed");
-                        // send the new content
-                        let content = CONTENT.read().unwrap().to_owned();
-                        ws.send(content.into()).await?;
+                        info!(?update, "commit updated");
+                        // send the update
+                        let update = serde_json::to_string(&update).expect("failed to convert update to JSON");
+                        ws.send(update.into()).await?;
                     },
 
                     // the client sent a request
@@ -159,14 +149,14 @@ fn ws(ws: rocket_ws::WebSocket) -> rocket_ws::Channel<'static> {
 }
 
 #[get("/commits")]
-async fn commits() -> Json<Vec<Response>> {
+async fn commits() -> Json<Vec<CommitExt>> {
     info!("commits requested");
     let (tx, rx) = oneshot::channel();
     ACTION.0.send(Action::GetCommits(tx)).await.unwrap();
     rx.await
         .unwrap()
         .into_iter()
-        .map(Response::from)
+        .map(CommitExt::from)
         .collect::<Vec<_>>()
         .into()
 }
@@ -195,8 +185,8 @@ pub enum Action {
     GetWordCloud(oneshot::Sender<Result<WordCloud, &'static str>>),
 }
 
-#[derive(Serialize)]
-struct Response {
+#[derive(Clone, Debug, Serialize)]
+struct CommitExt {
     #[serde(flatten)]
     commit: Commit,
 

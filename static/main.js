@@ -1,10 +1,10 @@
 import { debouncedUpdateGitShow } from "./git-show.js";
-import { commits, setCommits, commitExt, setCommitExt, fetchCommits } from "./commit-registry.js";
+import { commits, setCommits, commitExt, setCommitExt, fetchCommits, replaceCommit } from "./commit-registry.js";
 import { dialogs } from "./dialog-registry.js";
 import { openEditorDialog } from "./editor-dialog.js";
 import { openWordCloudDialog } from "./word-cloud-dialog.js";
 import { openGotoDialog } from "./goto-dialog.js";
-import { filteredCommits, openSearchDialog, traverseSearchResults } from "./search-dialog.js";
+import { filteredCommits, openSearchDialog, traverseSearchResults, renderSearchDialog } from "./search-dialog.js";
 
 // used by event handler attributes in index.html
 window.doAccept = doAccept;
@@ -42,6 +42,11 @@ export function goToCommit(hash_number) {
     renderAll();
 }
 export function renderAll() {
+    renderSearchDialog();
+    if (commitExt == null) {
+        return;
+    }
+
     updateSelectCommit();
     updateThingsThatDependOnSelectedCommits();
     title.className = commitExt.state;
@@ -111,7 +116,8 @@ const ws = new WebSocket("/ws");
 const selectedCommits = new Set;
 ws.addEventListener("message", event => {
     console.log(event.data);
-    // TODO: remove? use for change notifications?
+    replaceCommit(JSON.parse(event.data));
+    renderAll();
 });
 addEventListener("load", async event => {
     console.log(event);

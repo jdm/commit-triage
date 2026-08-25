@@ -188,18 +188,18 @@ impl App {
                             for commit in commits {
                                 if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
                                     commit.label = label.clone();
+                                    crate::web::update(commit);
                                 }
                             }
-                            crate::web::update(&self.commits[self.index]);
                             write_to_file(&self.commits, &self.path, None).unwrap();
                         },
                         Action::SetState(commits, state) => {
                             for commit in commits {
                                 if let Some(commit) = self.commits.iter_mut().find(|other| other.hash_number == commit.hash_number) {
                                     commit.state = state;
+                                    crate::web::update(commit);
                                 }
                             }
-                            crate::web::update(&self.commits[self.index]);
                             write_to_file(&self.commits, &self.path, None).unwrap();
                         },
                         Action::GetCommits(tx) => {

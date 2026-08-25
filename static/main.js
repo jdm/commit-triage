@@ -353,8 +353,8 @@ async function doCreateCodeLink() {
 function escapeForCopyingMarkdown(text) {
     return text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
 }
-function getCommit(number) {
-    return commits.find(commit => commit.hash_number == number);
+function getCommit(hash_number) {
+    return commits.find(commit => commit.hash_number == hash_number);
 }
 function markCommitsAccepted() {
     ws.send(JSON.stringify({"SetState": [getSelectedCommits(), "Accepted"]}));
@@ -466,7 +466,7 @@ function clearSelection() {
 }
 export function getSelectedCommits() {
     if (commitSelectionIsActive()) {
-        return [...selectedCommits].map(number => getCommit(number));
+        return [...selectedCommits].map(hash_number => getCommit(hash_number));
     } else {
         return [commitExt];
     }

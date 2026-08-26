@@ -12,10 +12,7 @@ let searchFirstTime = true;
 
 export function openSearchDialog() {
     searchDialog.showModal();
-    if (searchFirstTime) {
-        searchFirstTime = false;
-        renderSearchDialog();
-    }
+    initSearchDialog();
 }
 export function traverseSearchResults(delta, filtered = true) {
     const whichCommits = filtered ? filteredCommits : commits;
@@ -26,6 +23,12 @@ export function traverseSearchResults(delta, filtered = true) {
 async function updateSearch() {
     await fetchCommits();
     renderSearchDialog();
+}
+export function initSearchDialog() {
+    if (searchFirstTime) {
+        searchFirstTime = false;
+        renderSearchDialog();
+    }
 }
 export function renderSearchDialog() {
     const filterFn = searchFilter.value.length > 0

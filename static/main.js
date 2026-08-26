@@ -4,7 +4,7 @@ import { dialogs } from "./dialog-registry.js";
 import { openEditorDialog } from "./editor-dialog.js";
 import { openWordCloudDialog } from "./word-cloud-dialog.js";
 import { openGotoDialog } from "./goto-dialog.js";
-import { filteredCommits, openSearchDialog, traverseSearchResults, renderSearchDialog } from "./search-dialog.js";
+import { filteredCommits, openSearchDialog, traverseSearchResults, initSearchDialog, renderSearchDialog } from "./search-dialog.js";
 
 // used by event handler attributes in index.html
 window.doAccept = doAccept;
@@ -42,7 +42,7 @@ export function goToCommit(hash_number) {
     renderAll();
 }
 export function renderAll() {
-    renderSearchDialog();
+    initSearchDialog();
     if (commitExt == null) {
         return;
     }
